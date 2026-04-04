@@ -111,14 +111,21 @@ def fig_lambda_sweep_conservation(df: pd.DataFrame, out_dir: Path) -> None:
 
 
 def fig_comparative_data_scaling(grouped_df: pd.DataFrame, out_dir: Path) -> None:
-    """Plain vs midpoint PIML, test error vs D, at large capacity."""
-    fig, ax = plt.subplots(figsize=(6, 4.5))
+    """All models, test error vs D, at large capacity."""
+    fig, ax = plt.subplots(figsize=(7, 4.5))
 
-    MODEL_COLORS = {"plain": "#1f77b4", "piml": "#d62728"}
-    MODEL_LABELS = {"plain": "Plain MLP", "piml": "PIML (midpoint)"}
-    MARKERS = {"plain": "o", "piml": "s"}
+    MODEL_COLORS = {
+        "plain": "#1f77b4", "piml": "#d62728",
+        "piml-simpson": "#2ca02c", "piml-conservation": "#ff7f0e",
+    }
+    MODEL_LABELS = {
+        "plain": "Plain MLP", "piml": "PIML (midpoint)",
+        "piml-simpson": "PIML (composite)", "piml-conservation": "PIML (conservation)",
+    }
+    MARKERS = {"plain": "o", "piml": "s", "piml-simpson": "D", "piml-conservation": "^"}
 
-    for model in ["plain", "piml"]:
+    all_models = sorted(grouped_df["model_name"].unique())
+    for model in all_models:
         sub = grouped_df[
             (grouped_df["model_name"] == model) &
             (grouped_df["capacity_name"] == "large")
@@ -130,15 +137,15 @@ def fig_comparative_data_scaling(grouped_df: pd.DataFrame, out_dir: Path) -> Non
         E_err = sub["test_rel_l2_stderr"].values
         ax.errorbar(D, E, yerr=E_err,
                     label=MODEL_LABELS.get(model, model),
-                    color=MODEL_COLORS.get(model),
-                    marker=MARKERS.get(model),
+                    color=MODEL_COLORS.get(model, "gray"),
+                    marker=MARKERS.get(model, "x"),
                     capsize=3, lw=2)
 
     ax.set_xscale("log")
     ax.set_yscale("log")
     ax.set_xlabel("Dataset size $D$")
     ax.set_ylabel("Test relative $\\ell_2$")
-    ax.set_title("Data Scaling: Plain vs Midpoint PIML (Large, $N = 67{,}074$)")
+    ax.set_title("Data Scaling: All Priors (Large Capacity)")
     ax.legend()
     ax.grid(True, alpha=0.3)
 

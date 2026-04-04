@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023/Debian) (preloaded format=pdflatex 2025.10.30)  4 APR 2026 17:29
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023/Debian) (preloaded format=pdflatex 2025.10.30)  4 APR 2026 18:39
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -639,11 +639,11 @@ File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 File: mt-msb.cfg 2005/06/01 v1.0 microtype config. file: AMS symbols (b) (RS)
 )
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <10> on input line 57.
+(Font)              <10> on input line 55.
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <7> on input line 57.
+(Font)              <7> on input line 55.
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <5> on input line 57.
+(Font)              <5> on input line 55.
  [1
 
 {/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map}{/usr/share/texmf/fonts/enc/
@@ -651,11 +651,11 @@ dvips/lm/lm-ec.enc}{/usr/share/texmf/fonts/enc/dvips/lm/lm-mathit.enc}{/usr/sha
 re/texmf/fonts/enc/dvips/lm/lm-rm.enc}{/usr/share/texmf/fonts/enc/dvips/lm/lm-m
 athsy.enc}]
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <10.95> on input line 95.
+(Font)              <10.95> on input line 92.
 
 [2]
 LaTeX Font Info:    Trying to load font information for T1+lmtt on input line 1
-65.
+63.
  (/usr/share/texmf/tex/latex/lm/t1lmtt.fd
 File: t1lmtt.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 )
@@ -663,64 +663,61 @@ Package microtype Info: Loading generic protrusion settings for font family
 (microtype)             `lmtt' (encoding: T1).
 (microtype)             For optimal results, create family-specific settings.
 (microtype)             See the microtype manual for details.
- [3]
+ [3] [4{/usr/share/texmf/fonts/enc/dvips/lm/lm-mathex.enc}]
 LaTeX Font Info:    Trying to load font information for TS1+lmr on input line 2
-41.
-
-(/usr/share/texmf/tex/latex/lm/ts1lmr.fd
+57.
+ (/usr/share/texmf/tex/latex/lm/ts1lmr.fd
 File: ts1lmr.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
-) [4{/usr/share/texmf/fonts/enc/dvips/lm/lm-mathex.enc}] [5{/usr/share/texmf/fo
-nts/enc/dvips/lm/lm-ts1.enc}]
-<../figures-progress/fig_data_scaling.pdf, id=282, 1076.8886pt x 296.97412pt>
+) [5{/usr/share/texmf/fonts/enc/dvips/lm/lm-ts1.enc}]
+<../figures-progress/fig_data_scaling.pdf, id=291, 1076.8886pt x 296.97412pt>
 File: ../figures-progress/fig_data_scaling.pdf Graphic file (type pdf)
 <use ../figures-progress/fig_data_scaling.pdf>
 Package pdftex.def Info: ../figures-progress/fig_data_scaling.pdf  used on inpu
-t line 326.
+t line 342.
 (pdftex.def)             Requested size: 469.75502pt x 129.54521pt.
-<../figures-progress/fig_capacity_scaling.pdf, id=284, 1077.21477pt x 296.97412
+ [6]
+<../figures-progress/fig_capacity_scaling.pdf, id=301, 1077.21477pt x 296.97412
 pt>
 File: ../figures-progress/fig_capacity_scaling.pdf Graphic file (type pdf)
 <use ../figures-progress/fig_capacity_scaling.pdf>
 Package pdftex.def Info: ../figures-progress/fig_capacity_scaling.pdf  used on 
-input line 342.
+input line 359.
 (pdftex.def)             Requested size: 469.75502pt x 129.50443pt.
- [6 <../figures-progress/fig_data_scaling.pdf>]
-<../figures-progress/fig_comparative_data_scaling.pdf, id=362, 425.31737pt x 31
-6.40674pt>
+ [7 <../figures-progress/fig_data_scaling.pdf> <../figures-progress/fig_capacit
+y_scaling.pdf>]
+<../figures-progress/fig_comparative_data_scaling.pdf, id=457, 497.45216pt x 31
+6.49203pt>
 File: ../figures-progress/fig_comparative_data_scaling.pdf Graphic file (type p
 df)
 <use ../figures-progress/fig_comparative_data_scaling.pdf>
 Package pdftex.def Info: ../figures-progress/fig_comparative_data_scaling.pdf  
-used on input line 375.
-(pdftex.def)             Requested size: 328.82707pt x 244.62367pt.
- [7 <../figures-progress/fig_capacity_scaling.pdf>] [8 <../figures-progress/fig
-_comparative_data_scaling.pdf>]
-<../figures-progress/fig_error_heatmap.pdf, id=495, 850.13232pt x 371.29904pt>
+used on input line 393.
+(pdftex.def)             Requested size: 328.82707pt x 209.21378pt.
+ [8 <../figures-progress/fig_comparative_data_scaling.pdf>] [9]
+<../figures-progress/fig_error_heatmap.pdf, id=532, 1282.33571pt x 371.29904pt>
+
 File: ../figures-progress/fig_error_heatmap.pdf Graphic file (type pdf)
 <use ../figures-progress/fig_error_heatmap.pdf>
 Package pdftex.def Info: ../figures-progress/fig_error_heatmap.pdf  used on inp
-ut line 453.
-(pdftex.def)             Requested size: 469.75502pt x 205.16692pt.
- [9]
-<../figures-progress/fig_exponent_comparison.pdf, id=506, 712.36139pt x 298.547
+ut line 507.
+(pdftex.def)             Requested size: 469.75502pt x 136.01875pt.
+<../figures-progress/fig_exponent_comparison.pdf, id=533, 712.81958pt x 298.547
 26pt>
 File: ../figures-progress/fig_exponent_comparison.pdf Graphic file (type pdf)
 <use ../figures-progress/fig_exponent_comparison.pdf>
 Package pdftex.def Info: ../figures-progress/fig_exponent_comparison.pdf  used 
-on input line 462.
-(pdftex.def)             Requested size: 375.80544pt x 157.5004pt.
-
-[10 <../figures-progress/fig_error_heatmap.pdf> <../figures-progress/fig_expone
-nt_comparison.pdf>]
-<../figures-progress/fig_stability_summary.pdf, id=616, 714.92499pt x 296.97412
+on input line 517.
+(pdftex.def)             Requested size: 375.80544pt x 157.39563pt.
+ [10 <../figures-progress/fig_error_heatmap.pdf>]
+<../figures-progress/fig_stability_summary.pdf, id=596, 714.92499pt x 296.97412
 pt>
 File: ../figures-progress/fig_stability_summary.pdf Graphic file (type pdf)
 <use ../figures-progress/fig_stability_summary.pdf>
 Package pdftex.def Info: ../figures-progress/fig_stability_summary.pdf  used on
- input line 497.
+ input line 555.
 (pdftex.def)             Requested size: 469.75502pt x 195.13348pt.
-
-Overfull \hbox (35.43793pt too wide) in paragraph at lines 507--508
+ [11 <../figures-progress/fig_exponent_comparison.pdf>]
+Overfull \hbox (35.43793pt too wide) in paragraph at lines 566--567
 \T1/lmr/m/n/10.95 (-20) We per-formed a ded-i-cated $\OML/lmm/m/it/10.95 ^^U[]$
  \T1/lmr/m/n/10.95 (-20) sweep for the midpoint-residual prior across $\OML/lmm
 /m/it/10.95 ^^U \OMS/lmsy/m/n/10.95 2 f\OT1/lmr/m/n/10.95 (-20) 0\OML/lmm/m/it/
@@ -730,38 +727,45 @@ Overfull \hbox (35.43793pt too wide) in paragraph at lines 507--508
 1\OMS/lmsy/m/n/10.95 g$
  []
 
-[11 <../figures-progress/fig_stability_summary.pdf>]
-<../figures-progress/fig_lambda_midpoint.pdf, id=679, 786.77208pt x 333.59831pt
+[12 <../figures-progress/fig_stability_summary.pdf>]
+<../figures-progress/fig_lambda_midpoint.pdf, id=716, 786.77208pt x 333.59831pt
 >
 File: ../figures-progress/fig_lambda_midpoint.pdf Graphic file (type pdf)
 <use ../figures-progress/fig_lambda_midpoint.pdf>
 Package pdftex.def Info: ../figures-progress/fig_lambda_midpoint.pdf  used on i
-nput line 546.
+nput line 605.
 (pdftex.def)             Requested size: 469.75502pt x 199.18318pt.
-<../figures-progress/fig_lambda_conservation.pdf, id=680, 786.77208pt x 333.598
+<../figures-progress/fig_lambda_conservation.pdf, id=717, 786.77208pt x 333.598
 31pt>
 File: ../figures-progress/fig_lambda_conservation.pdf Graphic file (type pdf)
 <use ../figures-progress/fig_lambda_conservation.pdf>
 Package pdftex.def Info: ../figures-progress/fig_lambda_conservation.pdf  used 
-on input line 554.
+on input line 613.
 (pdftex.def)             Requested size: 469.75502pt x 199.18318pt.
- [12 <../figures-progress/fig_lambda_midpoint.pdf>] [13 <../figures-progress/fi
-g_lambda_conservation.pdf>] [14] [15] [16] [17] [18] [19] (./draft.aux)
+ [13 <../figures-progress/fig_lambda_midpoint.pdf> <../figures-progress/fig_lam
+bda_conservation.pdf>]
+[14] [15]
+Overfull \hbox (5.49751pt too wide) in paragraph at lines 724--727
+\T1/lmr/m/n/10.95 (-20) ter-parts for other prior types. Con-nect-ing these em-
+pir-i-cal regimes to the variance-limited/resolution-
+ []
+
+[16] [17] [18] [19] [20] (./draft.aux)
  ***********
 LaTeX2e <2023-11-01> patch level 1
 L3 programming layer <2024-01-22>
  ***********
 Package rerunfilecheck Info: File `draft.out' has not changed.
-(rerunfilecheck)             Checksum: D14F0C9C0FBCE1914B5AD65F8BE2170F;7895.
+(rerunfilecheck)             Checksum: 096DA7A41949ECF99BAAD78F367BFF6B;8602.
  ) 
 Here is how much of TeX's memory you used:
- 15964 strings out of 476182
- 262182 string characters out of 5795594
- 1936975 words of memory out of 5000000
- 37356 multiletter control sequences out of 15000+600000
- 661999 words of font info for 234 fonts, out of 8000000 for 9000
+ 16013 strings out of 476182
+ 262821 string characters out of 5795594
+ 1942975 words of memory out of 5000000
+ 37369 multiletter control sequences out of 15000+600000
+ 667703 words of font info for 248 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
- 75i,11n,79p,1002b,624s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 75i,12n,79p,1002b,626s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/share/texmf/fonts/type1/public/lm/lmbx10.pfb></usr/share/texmf/fonts/ty
 pe1/public/lm/lmbx12.pfb></usr/share/texmf/fonts/type1/public/lm/lmex10.pfb></u
 sr/share/texmf/fonts/type1/public/lm/lmmi10.pfb></usr/share/texmf/fonts/type1/p
@@ -777,10 +781,10 @@ texmf/fonts/type1/public/lm/lmsy8.pfb></usr/share/texmf/fonts/type1/public/lm/l
 mtt10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/symbols/ms
 am10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/symbols/msb
 m10.pfb>
-Output written on draft.pdf (19 pages, 545554 bytes).
+Output written on draft.pdf (20 pages, 574919 bytes).
 PDF statistics:
- 1012 PDF objects out of 1200 (max. 8388607)
- 540 compressed objects within 6 object streams
- 123 named destinations out of 1000 (max. 500000)
- 57225 words of extra memory for PDF output out of 61914 (max. 10000000)
+ 1050 PDF objects out of 1200 (max. 8388607)
+ 560 compressed objects within 6 object streams
+ 133 named destinations out of 1000 (max. 500000)
+ 59297 words of extra memory for PDF output out of 61914 (max. 10000000)
 

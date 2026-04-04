@@ -12,124 +12,47 @@
     "uT_norm_std": 0.9811112284660339,
     "physics_loss_on_truth": 0.15149536728858948
   },
-  "conservation_ground_truth": {
-    "conservation_loss_on_truth": 3.4e-14,
-    "max_relative_H_violation": 2.04e-9,
-    "mean_relative_H_violation": 1.51e-10,
-    "median_relative_H_violation": 7.93e-11
-  },
-  "data_validation": {
-    "solver_accuracy": {
-      "reintegration_max_relative_error": 1.91e-9,
-      "reintegration_mean_relative_error": 1.59e-10,
-      "method": "DOP853",
-      "reference_rtol": 1e-12,
-      "reference_atol": 1e-14
-    },
-    "normalization": {
-      "stats_match_recomputed": true,
-      "normalized_mean": [0.0, 0.0],
-      "normalized_std": [1.0, 1.0],
-      "float32_roundtrip_max_error": 1.19e-7
-    },
-    "positivity": {
-      "u0_all_positive": true,
-      "uT_all_positive": true,
-      "uT_min_x": 0.901004,
-      "uT_min_y": 0.069004
-    },
-    "flow_map": {
-      "injective": true,
-      "suspicious_pairs": 0,
-      "lipschitz_max": 3.67,
-      "lipschitz_mean": 1.54
-    },
-    "horizon": {
-      "T": 1.0,
-      "linearized_period": 2.9619,
-      "actual_period_range": [3.14, 3.45],
-      "T_over_period": [0.29, 0.34],
-      "mean_relative_displacement": 0.9224
-    },
-    "data_shapes": {
-      "u0_all": [24000, 2],
-      "uT_all": [24000, 2],
-      "train_pool": 20000,
-      "val_size": 2000,
-      "test_size": 2000,
-      "data_seeds": [11, 22, 33]
-    },
-    "output_distribution": {
-      "prey_range": [0.901, 5.576],
-      "predator_range": [0.069, 1.520],
-      "predator_dynamic_range": "22x",
-      "prey_skewness": 0.563,
-      "predator_skewness": 0.525
-    },
-    "baselines": {
-      "predict_mean_rel_error": 0.3511,
-      "identity_rel_error": 0.7164,
-      "linear_regression_R2_prey": 0.8941,
-      "linear_regression_R2_predator": 0.9311,
-      "best_plain_mlp_rel_error": 0.0007
-    }
-  },
-  "integrator_accuracy_on_truth_T1": {
-    "forward_euler_1step": 0.8546,
-    "implicit_midpoint_1step": 0.1285,
-    "rk4_1step": 0.2389,
-    "explicit_midpoint_2steps": 0.0757,
-    "explicit_midpoint_4steps": 0.0169,
-    "explicit_midpoint_8steps": 0.0040,
-    "explicit_midpoint_16steps": 0.0010
-  },
-  "conservation_lambda_sweep": {
-    "n_runs": 126,
-    "lambdas": [0.0, 0.0001, 0.001, 0.01, 0.1, 1.0, 10.0],
-    "capacities": ["small", "large"],
-    "dataset_sizes": [128, 1024, 4096],
-    "data_seeds": [11],
-    "train_seeds": [101, 202, 303],
-    "finding": "Bimodal optimization failure. Large model traps at ~0.09 test error on most seeds. Small model mostly escapes. No lambda consistently improves over plain baseline.",
-    "trap_error": 0.09,
-    "untrained_error": 0.32,
-    "trap_is_local_minimum": true
+  "composite_ground_truth_residual": {
+    "composite_midpoint_loss_on_truth": 0.006185547448694706,
+    "single_midpoint_loss_on_truth": 0.15149536728858948,
+    "reduction_factor": 24.49182849944163,
+    "conservation_loss_on_truth": 3.273648171119026e-14
   },
   "loss_scale_mismatch": {
     "tiny": {
-      "data_loss_normalized": 0.9625398516654968,
-      "physics_loss_physical": 1.2242350578308105,
-      "ratio_phys_over_data": 1.2718798662855348,
-      "effective_phys_contribution": 0.12242350578308106,
-      "effective_ratio": 0.1271879866285535
+      "data_loss_normalized": 1.0637134313583374,
+      "physics_loss_physical": 1.3717460632324219,
+      "ratio_phys_over_data": 1.2895823468927472,
+      "effective_phys_contribution": 0.1371746063232422,
+      "effective_ratio": 0.12895823468927473
     },
     "small": {
-      "data_loss_normalized": 1.0434200763702393,
-      "physics_loss_physical": 1.1866999864578247,
-      "ratio_phys_over_data": 1.137317570681614,
-      "effective_phys_contribution": 0.11866999864578248,
-      "effective_ratio": 0.11373175706816141
+      "data_loss_normalized": 0.9736021757125854,
+      "physics_loss_physical": 1.110487699508667,
+      "ratio_phys_over_data": 1.1405969781198302,
+      "effective_phys_contribution": 0.11104876995086671,
+      "effective_ratio": 0.11405969781198304
     },
     "large": {
-      "data_loss_normalized": 0.9459744095802307,
-      "physics_loss_physical": 1.1801490783691406,
-      "ratio_phys_over_data": 1.2475486296641187,
-      "effective_phys_contribution": 0.11801490783691407,
-      "effective_ratio": 0.12475486296641188
+      "data_loss_normalized": 1.0941460132598877,
+      "physics_loss_physical": 1.3431929349899292,
+      "ratio_phys_over_data": 1.2276176293765706,
+      "effective_phys_contribution": 0.13431929349899294,
+      "effective_ratio": 0.12276176293765709
     }
   },
   "gradient_scale": {
     "tiny": {
-      "grad_norm_data_loss": 1.2151490209226767,
-      "grad_norm_physics_loss": 2.182342723020443,
-      "grad_norm_ratio_phys_over_data": 1.7959465756416977,
-      "effective_grad_ratio_at_lambda": 0.17959465756416976
+      "grad_norm_data_loss": 1.0264195519576926,
+      "grad_norm_physics_loss": 1.3918704906800152,
+      "grad_norm_ratio_phys_over_data": 1.3560444050635017,
+      "effective_grad_ratio_at_lambda": 0.13560444050635018
     },
     "small": {
-      "grad_norm_data_loss": 1.1585341448414082,
-      "grad_norm_physics_loss": 2.284383825102196,
-      "grad_norm_ratio_phys_over_data": 1.9717880869319613,
-      "effective_grad_ratio_at_lambda": 0.19717880869319615
+      "grad_norm_data_loss": 1.5834023840187894,
+      "grad_norm_physics_loss": 2.9541280555053078,
+      "grad_norm_ratio_phys_over_data": 1.8656837234307542,
+      "effective_grad_ratio_at_lambda": 0.1865683723430754
     }
   },
   "issues": [

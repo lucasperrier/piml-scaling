@@ -18,7 +18,10 @@ import torch
 
 from scaling_piml.config_loader import load_experiment_config
 from scaling_piml.data.dataset import FlowMapDataset
-from scaling_piml.losses import physics_midpoint_residual, mse_loss, physics_loss
+from scaling_piml.losses import (
+    physics_midpoint_residual, mse_loss, physics_loss,
+    composite_midpoint_loss, conservation_loss,
+)
 from scaling_piml.systems.lotka_volterra import lotka_volterra_rhs
 
 
@@ -59,6 +62,57 @@ def check_ground_truth_residual(data_root: str, cfg) -> dict:
             alpha=cfg.system.alpha, beta=cfg.system.beta,
             delta=cfg.system.delta, gamma=cfg.system.gamma,
         )),
+    }
+
+
+def check_composite_ground_truth_residual(data_root: str, cfg) -> dict:
+    """Compute composite 2-step midpoint and conservation residuals on ground truth.
+
+    For the composite residual we need u_{T/2} which is not in the dataset,
+    so we integrate with scipy to get the true midpoint solution.
+    """
+    from scipy.integrate import solve_ivp
+
+    ds = FlowMapDataset(data_root, "test", normalize=False)
+    u0_np = ds.u0  # (B, 2)
+    uT_np = ds.uT  # (B, 2)
+
+    # Integrate to get true u(T/2) for each sample
+    T = cfg.data.T
+    alpha, beta, delta, gamma = cfg.system.alpha, cfg.system.beta, cfg.system.delta, cfg.system.gamma
+
+    def rhs(t, y):
+        x, yy = y
+        return [alpha * x - beta * x * yy, delta * x * yy - gamma * yy]
+
+    uT2_list = []
+    for i in range(len(u0_np)):
+        sol = solve_ivp(rhs, [0, T / 2], u0_np[i], rtol=1e-10, atol=1e-12)
+        uT2_list.append(sol.y[:, -1])
+    uT2_np = np.array(uT2_list)
+
+    u0 = torch.from_numpy(u0_np)
+    uT = torch.from_numpy(uT_np)
+    uT2 = torch.from_numpy(uT2_np).float()
+
+    sys_kw = dict(alpha=alpha, beta=beta, delta=delta, gamma=gamma)
+
+    # Composite 2-step midpoint loss on ground truth
+    composite_loss_val = float(composite_midpoint_loss(
+        u0=u0, uT2_hat=uT2, uT_hat=uT, T=T, **sys_kw,
+    ))
+
+    # Single-step midpoint loss on ground truth (for comparison)
+    single_loss_val = float(physics_loss(u0=u0, uT_hat=uT, T=T, **sys_kw))
+
+    # Conservation loss on ground truth
+    conservation_loss_val = float(conservation_loss(u0=u0, uT_hat=uT, **sys_kw))
+
+    return {
+        "composite_midpoint_loss_on_truth": composite_loss_val,
+        "single_midpoint_loss_on_truth": single_loss_val,
+        "reduction_factor": single_loss_val / max(composite_loss_val, 1e-15),
+        "conservation_loss_on_truth": conservation_loss_val,
     }
 
 
@@ -184,6 +238,14 @@ def main() -> None:
     else:
         print("\n  Midpoint residual is reasonably small (< 5% relative).")
 
+    # 1b. Composite & conservation ground-truth residuals
+    print("\n--- 1b. Composite & conservation residuals on ground truth ---")
+    comp_res = check_composite_ground_truth_residual(args.data_root, cfg)
+    for k, v in comp_res.items():
+        print(f"  {k}: {v:.6g}")
+    print(f"\n  Composite 2-step midpoint reduces GT residual by ~{comp_res['reduction_factor']:.0f}x")
+    print(f"  Conservation loss on GT: {comp_res['conservation_loss_on_truth']:.2e} (should be ~0)")
+
     # 2. Loss scale mismatch
     print("\n--- 2. Loss scale mismatch (data=normalized, physics=physical) ---")
     scale_res = check_loss_scale_mismatch(args.data_root, cfg)
@@ -234,6 +296,7 @@ def main() -> None:
     # Save full results
     report = {
         "ground_truth_residual": gt_res,
+        "composite_ground_truth_residual": comp_res,
         "loss_scale_mismatch": scale_res,
         "gradient_scale": grad_res,
         "issues": issues,

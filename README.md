@@ -1,30 +1,50 @@
 # Empirical Scaling Laws for Physics-Informed Priors in SciML
 
-This repository implements a minimal, reproducible experiment for a first foundational paper in scientific machine learning.
+This repository implements a controlled empirical study of how physics-informed priors change scaling behavior in scientific machine learning.
 
 ## Core question
 
-> Does adding a simple physics prior change empirical scaling behavior with respect to model size and dataset size in a controlled SciML setting?
-
-The project is intentionally narrow. It is designed to produce one clean paper-quality result, not a broad SciML benchmark suite.
+> Do different physics priors produce distinguishable scaling signatures, and can these signatures diagnose the quality of the prior?
 
 ## Current status (2026-04-04)
 
-### Completed experiments
-- **Full scaling sweep**: 720 runs (plain + midpoint PIML) × 5 capacities × 8 dataset sizes × 3 data seeds × 3 train seeds
-- **Midpoint λ sweep**: 324 runs across 6 λ values
-- **Conservation λ sweep**: 126 runs across 7 λ values
-- **Data validation**: solver accuracy, conservation law, normalization, positivity, injectivity all verified
+### Phase 1 — Lotka–Volterra pilot (complete)
 
-### Key findings
-| Model | E∞ | α (capacity) | β (data) | Status |
+| Experiment | Runs | Status |
+|-----------|------|--------|
+| Full scaling sweep (plain + midpoint) | 720 | Done |
+| Composite (simpson) sweep | ~360 | Done |
+| Midpoint λ sweep | 324 | Done |
+| Conservation λ sweep | 126 | Done |
+| Data validation | — | Done |
+
+#### Key findings (Phase 1)
+
+| Model | E∞ | α (capacity) | β (data) | Qualitative signature |
 |-------|-----|------|------|--------|
 | Plain MLP | ≈ 0 | 0.91 | 0.85 | Clean power-law scaling |
-| PIML (midpoint) | ≈ 0.011 | 0.16 | 0.53 | Degraded by 15% irreducible prior bias |
-| PIML (conservation) | — | — | — | Bimodal optimization failure (trapping at ~0.09 for large models) |
+| PIML (midpoint) | ≈ 0.011 | 0.16 | 0.53 | Floor raised by 15% irreducible prior bias |
+| PIML (composite) | ≈ 0.001 | ~2.0 | ~1.0 | Reduced bias → steeper exponents |
+| PIML (conservation) | — | — | — | Bimodal optimization failure |
 
-The midpoint-rule ODE residual prior **degrades** scaling at all tested configurations due to irreducible approximation error at T=1.0.
-The exact conservation-law prior exhibits a **bimodal training failure**: large models frequently trap in a bad local minimum at ~0.09 test error. No λ value consistently improves over the plain baseline.
+Three-way taxonomy:
+- **Biased prior** (midpoint): raises error floor, compresses exponents
+- **Reduced-bias prior** (composite): recovers and steepens scaling
+- **Exact-but-weak prior** (conservation): corrupts scaling surface stochastically
+
+### Phase 2 — Extended experiments (planned)
+
+| # | Experiment | Purpose | Est. runs |
+|---|-----------|---------|-----------|
+| 1 | Dense LV sweep | Statistical power for main comparisons | ~2,079 |
+| 2 | Horizon sweep | Mechanistic test: discretization error ↔ E∞ | ~3,240 |
+| 3 | Alternative ansatzes + held-out validation | Fit robustness and predictive adequacy | 0 (analysis) |
+| 4 | Optimization rescue (conservation) | Resolve bimodality ambiguity | ~150 |
+| 5 | Van der Pol replication | Cross-system: smooth nonlinear oscillator | ~1,080–1,440 |
+| 6 | Duffing replication | Cross-system: harder/chaotic regime | ~1,080–1,440 |
+| 7 | Noise robustness | Observation noise + prior parameter mismatch | ~6,480 |
+
+See `IMPLEMENTATION_CHECKLIST.md` for detailed task breakdowns.
 
 ### Data validation summary
 - Solver accuracy: max relative error ~1.9e-9 (DOP853, rtol=1e-9, atol=1e-11)
@@ -36,167 +56,180 @@ The exact conservation-law prior exhibits a **bimodal training failure**: large 
 
 ## Scope
 
-### Included in v1
-- System: Lotka–Volterra ODE
-- Task: fixed-horizon flow-map prediction
-- Models: plain MLP, midpoint-residual MLP, conservation-law MLP
-- Physics priors: midpoint-rule ODE residual (approximate), conservation law H invariant (exact)
-- Scaling axes: model capacity `N` and dataset size `D`
-- Primary metric: relative L2 error at prediction horizon `T`
+### Systems
 
-### Excluded from v1
-- PDEs
-- DeepONet, FNO, Neural ODE training
-- autoregressive rollouts
-- chaotic systems
-- real-world data
-- distributed training
-- hyperparameter search
+| System | Role | Status |
+|--------|------|--------|
+| **Lotka–Volterra** | Primary system. Non-chaotic, has exact first integral. | Implemented |
+| **Van der Pol** | Smooth nonlinear oscillator, no polynomial first integral. Tests whether taxonomy generalizes beyond conservative systems. | Planned (Phase 2) |
+| **Duffing** | Stronger nonlinearity, potential chaos (forced case). Stress test for scaling signatures. | Planned (Phase 2) |
 
-## Task
+### Task
 
-Lotka–Volterra dynamics:
+Fixed-horizon flow-map prediction: learn $f_\theta(u_0) \mapsto u(T)$.
 
-\[
-\dot{x} = \alpha x - \beta x y,\qquad
-\dot{y} = \delta x y - \gamma y
-\]
+Applies identically to all three systems. No autoregressive rollout, no PDE, no operator learning.
 
-State:
-\[
-u(t) = [x(t), y(t)] \in \mathbb{R}^2
-\]
+### Physics priors
 
-Learning problem:
-\[
-f_\theta(u_0) \mapsto u(T)
-\]
+| Prior | Type | Bias | Systems |
+|-------|------|------|---------|
+| None (plain) | Baseline | — | All |
+| Midpoint ODE residual | Approximate, biased | ~15% at T=1.0 (LV) | All |
+| Composite 2-step midpoint | Approximate, reduced bias | ~0.6% at T=1.0 (LV) | All |
+| Conservation law | Exact, scalar constraint | 0 (exact) | LV (H invariant), Duffing (energy, undamped) |
+| Dissipation rate / energy bound | Exact, scalar constraint | 0 (exact) | Van der Pol (TBD) |
 
-This is a fixed-horizon flow-map prediction task.
+### Scaling axes
+- Model capacity $N$ (parameter count): 5–7 levels from tiny to xlarge
+- Dataset size $D$: 8–11 levels from 48 to 8192
 
-## Main scaling relation
+### Scaling ansatz
 
-The central analysis object is:
+Primary:
+$$E(N, D) \approx E_\infty + aN^{-\alpha} + bD^{-\beta}$$
 
-\[
-E(N, D) \approx E_\infty + aN^{-\alpha} + bD^{-\beta}
-\]
+Alternative ansatzes compared in Phase 2:
+- No-floor power law: $E = aN^{-\alpha} + bD^{-\beta}$
+- Multiplicative separable: $E = cN^{-\alpha}D^{-\beta}$
+- Additive with interaction: $E = E_\infty + aN^{-\alpha} + bD^{-\beta} + dN^{-\alpha}D^{-\beta}$
+- Nonparametric (GP or thin-plate spline on log-log grid)
 
-where:
-- `E(N, D)` = test error
-- `N` = parameter count
-- `D` = training set size
-- `E_inf` = irreducible error floor
-- `alpha` = capacity scaling exponent
-- `beta` = data scaling exponent
+### Experiment inclusion criterion
+
+Every experiment answers at least one of:
+1. Does the signature replicate?
+2. Does the fit remain statistically stable?
+3. Does a causal intervention move the expected parameter?
+4. Does the ansatz fail in an interpretable way?
 
 ## Default experiment settings
 
 ### Lotka–Volterra parameters
-- `alpha = 1.5`
-- `beta = 1.0`
-- `delta = 1.0`
-- `gamma = 3.0`
+- $\alpha = 1.5$, $\beta = 1.0$, $\delta = 1.0$, $\gamma = 3.0$
 
-### Prediction horizon
-- `T = 1.0`
+### Prediction horizons
+- Primary: $T = 1.0$
+- Horizon sweep: $T \in \{0.5, 1.0, 2.0\}$
 
 ### Initial conditions
-- `x0 ~ Uniform(0.5, 2.5)`
-- `y0 ~ Uniform(0.5, 2.5)`
+- $x_0 \sim \text{Uniform}(0.5, 2.5)$, $y_0 \sim \text{Uniform}(0.5, 2.5)$
 
 ### ODE solver
-- `solve_ivp`
-- method: `DOP853` preferred
-- `rtol = 1e-9`
-- `atol = 1e-11`
+- `solve_ivp`, method `DOP853`, rtol=$10^{-9}$, atol=$10^{-11}$
 
 ## Dataset protocol
-### Per data seed
-- train pool: `20000`
-- validation: `2000`
-- test: `2000`
-### Data seeds
-- `11`
-- `22`
-- `33`
-### Dataset sizes for scaling
 
-```text
+### Per data seed
+- Train pool: 20,000
+- Validation: 2,000
+- Test: 2,000
+
+### Data seeds
+- 11, 22, 33
+
+### Dataset sizes (Phase 1)
+
+```
 D ∈ {64, 128, 256, 512, 1024, 2048, 4096, 8192}
 ```
 
-Constraints:
-- Training subsets must be **nested slices** of the same shuffled master train pool.
+### Dataset sizes (Phase 2 dense sweep)
 
-Normalization:
-- Compute input and target mean/std from the **full train pool only**.
-- Reuse the same normalization for all subset sizes within a data seed.
+```
+D ∈ {48, 64, 96, 128, 256, 384, 512, 1024, 2048, 4096, 8192}
+```
+
+Constraints:
+- Training subsets are **nested slices** of the same shuffled master train pool.
+- Normalization computed from the **full train pool only**, reused for all subset sizes within a data seed.
 
 ## Models
 
 ### Plain MLP
 - Input: normalized $u_0$
 - Output: normalized $u(T)$
-- Activation: ReLU or GELU
-- Use one consistent architecture family across all runs
+- Activation: ReLU (default) or GELU
+- One consistent architecture family across all runs
 
 ### Physics-regularized MLP (midpoint residual)
 
-Same architecture as the plain MLP. Only the loss changes.
-Loss terms (with a single physics weight $\lambda$):
-
-- Data loss:
-  \[
-  \mathcal{L}_{\text{data}} = \lVert \hat{u}(T) - u(T) \rVert_2^2
-  \]
-
-- Physics loss (implicit midpoint residual using the vector field $F$):
-  \[
-  \mathcal{L}_{\text{phys}} = \left\lVert \hat{u}(T) - u_0 - T\,F\left(\tfrac{\hat{u}(T) + u_0}{2}\right) \right\rVert_2^2
-  \]
-
-- Total loss:
-  \[
-  \mathcal{L} = \mathcal{L}_{\text{data}} + \lambda\,\mathcal{L}_{\text{phys}}
-  \]
-
-Default:
-- `lambda_phys = 0.1`
+Same architecture. Loss:
+$$\mathcal{L} = \mathcal{L}_{\text{data}} + \lambda\,\mathcal{L}_{\text{phys}}, \quad \mathcal{L}_{\text{phys}} = \left\lVert \hat{u}(T) - u_0 - T\,F\!\left(\tfrac{\hat{u}(T) + u_0}{2}\right) \right\rVert_2^2$$
 
 **Status**: Irreducible ground-truth residual ~15% at T=1.0. Degrades performance at all λ ≥ 0.01.
+
+### Physics-regularized MLP (composite 2-step midpoint)
+
+Same architecture. Applies midpoint rule on $[0, T/2]$ and $[T/2, T]$ separately, using a learned midpoint $u(T/2)$ (4D output).
+
+**Status**: Ground-truth residual ~24× lower than single-step. Recovers and steepens scaling.
 
 ### Physics-regularized MLP (conservation law)
 
 Same architecture. Loss uses the Lotka–Volterra first integral:
+$$H(u,v) = \delta u - \gamma \ln u + \beta v - \alpha \ln v$$
+$$\mathcal{L}_{\text{cons}} = \left( H(\hat{u}(T)) - H(u_0) \right)^2$$
 
-\[
-H(u,v) = \delta u - \gamma \ln u + \beta v - \alpha \ln v
-\]
-
-- Conservation loss:
-  \[
-  \mathcal{L}_{\text{cons}} = \left( H(\hat{u}(T)) - H(u_0) \right)^2
-  \]
-
-- Total loss:
-  \[
-  \mathcal{L} = \mathcal{L}_{\text{data}} + \lambda\,\mathcal{L}_{\text{cons}}
-  \]
-
-Ground-truth residual: ~3.4e-14 (exact to machine precision).
-
-**Status**: Bimodal optimization failure. Large models trap at ~0.09 test error on most seeds. No λ consistently improves over plain.
+**Status**: Exact but scalar constraint on vector output. Bimodal optimization failure. Large models trap at ~0.09.
 
 ## Capacity grid
 
-| name   | hidden widths |
-|--------|--------------|
-| tiny   | `[32, 32]` |
-| small  | `[64, 64]` |
-| medium | `[128, 128]` |
-| large  | `[256, 256]` |
-| xlarge | `[256, 256, 256]` |
+| Name | Hidden widths | Status |
+|------|--------------|--------|
+| tiny | `[32, 32]` | Implemented |
+| small | `[64, 64]` | Implemented |
+| small-med | `[96, 96]` | Planned (Phase 2) |
+| medium | `[128, 128]` | Implemented |
+| med-large | `[192, 192]` | Planned (Phase 2) |
+| large | `[256, 256]` | Implemented |
+| xlarge | `[256, 256, 256]` | Implemented |
+
+## Directory structure
+
+```
+configs/           YAML configs (default, pilot, smoke, per-system)
+data/              Lotka–Volterra datasets (3 data seeds)
+data-vdp/          Van der Pol datasets (planned)
+data-duffing/      Duffing datasets (planned)
+paper/             LaTeX draft
+runs-progress/     Phase 1 main results (plain + midpoint)
+runs-simpson/      Composite (simpson) results
+runs-dense/        Phase 2 dense sweep (planned)
+runs-horizon/      Phase 2 horizon sweep (planned)
+runs-rescue/       Phase 2 optimization rescue (planned)
+runs-vdp/          Van der Pol results (planned)
+runs-duffing/      Duffing results (planned)
+runs-noise/        Noise robustness results (planned)
+scripts/           All experiment, analysis, and figure scripts
+src/scaling_piml/  Source package
+tests/             Pytest tests
+```
+
+## Quickstart
+
+```bash
+# Install
+python -m pip install -e .
+
+# Generate datasets
+python scripts/generate_datasets.py --config configs/default.yaml --out data
+
+# Run a single experiment
+python scripts/run_experiment.py --config configs/default.yaml \
+  --data-root data --D 256 --train-seed 101 --model plain --capacity small
+
+# Run a full sweep
+python scripts/run_sweep.py --config configs/default.yaml \
+  --data-dir data --models plain,piml --out runs-progress
+
+# Aggregate results
+python scripts/aggregate_runs.py --runs-root runs-progress --out-dir runs-progress
+
+# Fit scaling laws
+python scripts/fit_scaling.py --grouped-metrics runs-progress/grouped_metrics.csv \
+  --out-dir runs-progress
+```
 
 ## Training protocol
 

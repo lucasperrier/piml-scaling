@@ -20,9 +20,19 @@ import pandas as pd
 # ---------------------------------------------------------------------------
 # Style
 # ---------------------------------------------------------------------------
-MODEL_COLORS = {"plain": "#1f77b4", "piml": "#d62728"}
-MODEL_LABELS = {"plain": "Plain MLP", "piml": "Physics-informed MLP"}
-MARKERS = {"plain": "o", "piml": "s"}
+MODEL_COLORS = {
+    "plain": "#1f77b4",
+    "piml": "#d62728",
+    "piml-simpson": "#2ca02c",
+    "piml-conservation": "#ff7f0e",
+}
+MODEL_LABELS = {
+    "plain": "Plain MLP",
+    "piml": "PIML (midpoint)",
+    "piml-simpson": "PIML (composite)",
+    "piml-conservation": "PIML (conservation)",
+}
+MARKERS = {"plain": "o", "piml": "s", "piml-simpson": "D", "piml-conservation": "^"}
 
 
 def _setup_style() -> None:
@@ -101,8 +111,9 @@ def fig_capacity_scaling(grouped_df: pd.DataFrame, scaling_fits: dict, out_dir: 
 
     fig, axes = plt.subplots(1, len(picks), figsize=(5 * len(picks), 4), squeeze=False)
 
+    all_models = sorted(df["model_name"].unique())
     for ax, D in zip(axes[0], picks):
-        for model in ["plain", "piml"]:
+        for model in all_models:
             sub = df[(df["model_name"] == model) & (df["dataset_size"] == D)].sort_values("parameter_count")
             if sub.empty:
                 continue
@@ -110,14 +121,14 @@ def fig_capacity_scaling(grouped_df: pd.DataFrame, scaling_fits: dict, out_dir: 
             E = sub["test_rel_l2_mean"].values
             E_err = sub["test_rel_l2_stderr"].values if "test_rel_l2_stderr" in sub.columns else np.zeros_like(E)
             ax.errorbar(N, E, yerr=E_err, label=MODEL_LABELS.get(model, model),
-                        color=MODEL_COLORS.get(model), marker=MARKERS.get(model), capsize=3)
+                        color=MODEL_COLORS.get(model, "gray"), marker=MARKERS.get(model, "x"), capsize=3)
 
             # overlay fit curve if available
             for fit_rec in scaling_fits.get("capacity_fits", []):
                 if fit_rec["model_name"] == model and fit_rec["dataset_size"] == D and "alpha" in fit_rec:
                     N_fit = np.linspace(N.min() * 0.8, N.max() * 1.2, 100)
                     E_fit = fit_rec["E_inf"] + fit_rec["a"] * np.power(N_fit, -fit_rec["alpha"])
-                    ax.plot(N_fit, E_fit, "--", color=MODEL_COLORS.get(model), alpha=0.5,
+                    ax.plot(N_fit, E_fit, "--", color=MODEL_COLORS.get(model, "gray"), alpha=0.5,
                             label=f"$\\alpha$={fit_rec['alpha']:.2f}")
 
         ax.set_xscale("log")
@@ -152,8 +163,9 @@ def fig_data_scaling(grouped_df: pd.DataFrame, scaling_fits: dict, out_dir: Path
 
     fig, axes = plt.subplots(1, len(picks), figsize=(5 * len(picks), 4), squeeze=False)
 
+    all_models = sorted(df["model_name"].unique())
     for ax, cap in zip(axes[0], picks):
-        for model in ["plain", "piml"]:
+        for model in all_models:
             sub = df[(df["model_name"] == model) & (df["capacity_name"] == cap)].sort_values("dataset_size")
             if sub.empty:
                 continue
@@ -161,14 +173,14 @@ def fig_data_scaling(grouped_df: pd.DataFrame, scaling_fits: dict, out_dir: Path
             E = sub["test_rel_l2_mean"].values
             E_err = sub["test_rel_l2_stderr"].values if "test_rel_l2_stderr" in sub.columns else np.zeros_like(E)
             ax.errorbar(D, E, yerr=E_err, label=MODEL_LABELS.get(model, model),
-                        color=MODEL_COLORS.get(model), marker=MARKERS.get(model), capsize=3)
+                        color=MODEL_COLORS.get(model, "gray"), marker=MARKERS.get(model, "x"), capsize=3)
 
             # overlay fit curve
             for fit_rec in scaling_fits.get("data_fits", []):
                 if fit_rec["model_name"] == model and fit_rec["capacity_name"] == cap and "beta" in fit_rec:
                     D_fit = np.linspace(D.min() * 0.8, D.max() * 1.2, 100)
                     E_fit = fit_rec["E_inf"] + fit_rec["b"] * np.power(D_fit, -fit_rec["beta"])
-                    ax.plot(D_fit, E_fit, "--", color=MODEL_COLORS.get(model), alpha=0.5,
+                    ax.plot(D_fit, E_fit, "--", color=MODEL_COLORS.get(model, "gray"), alpha=0.5,
                             label=f"$\\beta$={fit_rec['beta']:.2f}")
 
         ax.set_xscale("log")
@@ -300,7 +312,8 @@ def fig_stability_summary(grouped_df: pd.DataFrame, out_dir: Path) -> None:
 
     # Divergence rate by model
     ax = axes[0]
-    for model in ["plain", "piml"]:
+    all_models = sorted(grouped_df["model_name"].unique())
+    for model in all_models:
         sub = grouped_df[grouped_df["model_name"] == model].sort_values("dataset_size")
         if sub.empty:
             continue
@@ -308,7 +321,7 @@ def fig_stability_summary(grouped_df: pd.DataFrame, out_dir: Path) -> None:
         agg = sub.groupby("dataset_size")["divergence_rate"].mean().reset_index()
         ax.plot(agg["dataset_size"], agg["divergence_rate"],
                 label=MODEL_LABELS.get(model, model),
-                color=MODEL_COLORS.get(model), marker=MARKERS.get(model))
+                color=MODEL_COLORS.get(model, "gray"), marker=MARKERS.get(model, "x"))
     ax.set_xscale("log")
     ax.set_xlabel("Dataset size $D$")
     ax.set_ylabel("Divergence rate")
@@ -319,7 +332,7 @@ def fig_stability_summary(grouped_df: pd.DataFrame, out_dir: Path) -> None:
 
     # Error spread (std) by model and D
     ax = axes[1]
-    for model in ["plain", "piml"]:
+    for model in all_models:
         sub = grouped_df[grouped_df["model_name"] == model].sort_values("dataset_size")
         if sub.empty:
             continue
@@ -327,7 +340,7 @@ def fig_stability_summary(grouped_df: pd.DataFrame, out_dir: Path) -> None:
             agg = sub.groupby("dataset_size")["test_rel_l2_std"].mean().reset_index()
             ax.plot(agg["dataset_size"], agg["test_rel_l2_std"],
                     label=MODEL_LABELS.get(model, model),
-                    color=MODEL_COLORS.get(model), marker=MARKERS.get(model))
+                    color=MODEL_COLORS.get(model, "gray"), marker=MARKERS.get(model, "x"))
     ax.set_xscale("log")
     ax.set_xlabel("Dataset size $D$")
     ax.set_ylabel("Std of test rel. L2 (across seeds)")
