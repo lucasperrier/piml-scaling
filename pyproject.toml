@@ -17,6 +17,7 @@ dependencies = [
   "pyyaml>=6.0",
   "tqdm>=4.66",
   "pandas>=2.0",
+  "matplotlib>=3.7",
 ]
 
 [project.optional-dependencies]

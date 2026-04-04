@@ -3,3 +3,9 @@
 # Dev/test/lint
 pytest>=7.4
 ruff>=0.3
+
+# Dashboard
+streamlit>=1.35
+streamlit-autorefresh>=1.0
+plotly>=5.20
+watchfiles>=1.1

@@ -485,6 +485,12 @@ python scripts/generate_datasets.py --config configs/smoke.yaml --out data-smoke
 python scripts/run_experiment.py --config configs/smoke.yaml --data-root data-smoke/data_seed=11 --D 64 --train-seed 101 --model plain
 ```
 
+Launch the live dashboard (auto-refreshing):
+
+```bash
+streamlit run dashboard/app.py
+```
+
 The smoke config in `configs/smoke.yaml` uses a single small dataset and five training epochs so you can confirm data generation, loading, training, checkpointing, and metrics writing without starting a full sweep.
 
 ## Success criterion

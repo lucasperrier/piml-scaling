@@ -5,6 +5,9 @@ pyyaml>=6.0
 tqdm>=4.66
 pandas>=2.0
 
+# Plotting
+matplotlib>=3.7
+
 # ML framework
 # If you want CPU-only wheels, consider:
 #   pip install torch --index-url https://download.pytorch.org/whl/cpu
