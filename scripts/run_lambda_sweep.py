@@ -48,12 +48,12 @@ def main() -> None:
     parser.add_argument("--overwrite", action="store_true")
     parser.add_argument(
         "--model", type=str, default="piml",
-        choices=["piml", "piml-conservation"],
+        choices=["piml", "piml-conservation", "piml-simpson"],
         help="Which physics-informed model to sweep (default: piml)",
     )
     args = parser.parse_args()
 
-    _PRIOR_MAP = {"piml": "midpoint", "piml-conservation": "conservation"}
+    _PRIOR_MAP = {"piml": "midpoint", "piml-conservation": "conservation", "piml-simpson": "simpson"}
     model_name = args.model
     prior_key = _PRIOR_MAP[model_name]
 

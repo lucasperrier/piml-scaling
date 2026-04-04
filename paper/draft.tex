@@ -57,8 +57,9 @@ E(N,D) \approx E_\infty + aN^{-\alpha} + bD^{-\beta},
 \]
 where $E$ is test error, $N$ is model capacity, and $D$ is dataset size.
 The ODE-residual prior, which incurs an irreducible approximation error at the tested horizon, degrades scaling uniformly and raises the error floor by an order of magnitude.
-The conservation-law prior, which is exact, \pending{conservation sweep results: state whether it improves data efficiency, changes exponents, or lowers error floor}.
+The conservation-law prior, which is exact, does not improve data efficiency or change scaling exponents; instead, it introduces a bimodal optimization failure in which larger models frequently trap in a bad local minimum, yielding test errors $\sim\!100\times$ worse than the plain baseline despite the prior being error-free on ground truth.
 These contrasting outcomes demonstrate that empirical scaling laws can distinguish a well-matched physics prior from a mismatched one, providing a principled diagnostic beyond point-wise benchmark comparisons.
+They also reveal that an exact prior is necessary but not sufficient: optimization pathology can negate the theoretical advantage of a zero-bias regularizer.
 \end{abstract}
 
 %% ================================================================
@@ -90,8 +91,8 @@ Our contributions are:
 \begin{enumerate}[leftmargin=*, itemsep=0.3em]
     \item A minimal, reproducible scaling-law protocol for comparing data-only and physics-regularized models on a controlled dynamical system.
     \item A two-axis scaling study over model capacity ($N$) and dataset size ($D$) for fixed-horizon flow-map prediction.
-    \item Empirical demonstration that scaling-law signatures distinguish a well-matched prior (exact conservation law) from a mismatched one (biased ODE residual), producing qualitatively different effects on exponents, error floors, and training stability.
-    \item A diagnostic methodology---complementing scaling fits with $\lambda$-sensitivity analysis and ground-truth residual checks---that can be reused in broader SciML evaluations.
+    \item Empirical demonstration that scaling-law signatures distinguish a well-matched prior (exact conservation law) from a mismatched one (biased ODE residual), producing qualitatively different failure modes: the biased prior raises the error floor deterministically, while the exact prior introduces stochastic optimization traps that worsen with model capacity.
+    \item A diagnostic methodology---complementing scaling fits with $\lambda$-sensitivity analysis, ground-truth residual checks, and data validation---that can be reused in broader SciML evaluations.
 \end{enumerate}
 
 %% ================================================================
@@ -363,31 +364,71 @@ At the tested horizon $T = 1.0$, even ground-truth flow-map targets incur a mean
 The physics loss therefore has an irreducible floor of $\mathcal{L}_{\mathrm{mid}}^* \approx 0.15$, which is $\sim\!50{,}000\times$ larger than the achievable data loss ($\sim\!3 \times 10^{-6}$).
 As training progresses and data loss decreases, the physics gradient dominates, and the optimizer converges to a plateau determined by the biased prior rather than the data.
 
-\subsection{Conservation-law prior: exact scaling}
+\subsection{Conservation-law prior: bimodal optimization failure}
 \label{sec:results-conservation}
 
-\pending{Run conservation-law lambda sweep and full scaling sweep.}
+The conservation-law prior, despite having zero irreducible error on ground-truth targets ($\mathcal{L}_{\mathrm{cons}}^* \approx 10^{-14}$), exhibits a qualitatively different failure mode from the midpoint prior.
+Rather than a deterministic error floor, the conservation prior introduces a \emph{bimodal optimization failure}: depending on the random seed, training either converges to the correct basin (matching the plain baseline) or traps in a bad local minimum at test error $\approx 0.09$.
 
-\pending{Fill in representative error table, same format as above.}
+A $\lambda$ sweep across 7 values ($\lambda \in \{0, 10^{-4}, 10^{-3}, 10^{-2}, 10^{-1}, 1, 10\}$) at two capacities and three dataset sizes (126 runs total) reveals the pattern:
 
-\pending{Fill in combined scaling fit: $\hat{E}_\infty$, $\hat{\alpha}$, $\hat{\beta}$.}
+\begin{center}
+\small
+\begin{tabular}{lccccccc}
+\toprule
+& \multicolumn{7}{c}{$\lambda_{\mathrm{phys}}$} \\
+\cmidrule(lr){2-8}
+Config & $0$ & $10^{-4}$ & $10^{-3}$ & $10^{-2}$ & $10^{-1}$ & $1$ & $10$ \\
+\midrule
+Small, $D\!=\!128$  & 0.0061 & 0.0071 & 0.0070 & 0.0068 & 0.0076 & 0.0086 & 0.0156 \\
+Small, $D\!=\!1024$ & 0.0022 & 0.0641 & 0.0641 & 0.0021 & 0.0022 & 0.0024 & 0.0038 \\
+Small, $D\!=\!4096$ & 0.0013 & 0.0977 & 0.0977 & 0.0468 & 0.0481 & 0.0013 & 0.1153 \\
+\midrule
+Large, $D\!=\!128$  & 0.0028 & 0.0885 & 0.0885 & 0.0583 & 0.0288 & 0.0030 & 0.2778 \\
+Large, $D\!=\!1024$ & 0.0008 & 0.0869 & 0.0869 & 0.0870 & 0.0615 & 0.1141 & 0.2652 \\
+Large, $D\!=\!4096$ & 0.0008 & 0.0906 & 0.0906 & 0.0905 & 0.0336 & 0.0511 & 0.1971 \\
+\bottomrule
+\end{tabular}
+\end{center}
 
-\paragraph{Expected contrast.}
-Because the conservation-law prior has zero irreducible error on ground-truth targets (verified: $\mathcal{L}_{\mathrm{cons}}^* \approx 10^{-14}$ on the test set), we expect qualitatively different behavior from the midpoint prior.
-The key questions are whether the prior:
+\paragraph{Key observations.}
 \begin{itemize}[leftmargin=*]
-    \item lowers the error floor relative to the plain model,
-    \item steepens the data-scaling exponent (improved data efficiency),
-    \item changes capacity scaling, or
-    \item primarily helps in the low-data regime.
+    \item The large model ($N = 67{,}074$) traps at $\approx 0.09$ across nearly all $\lambda > 0$ and $D$ values.
+    When it escapes (e.g., $\lambda = 1$, $D = 128$), performance matches the plain baseline.
+    \item The small model ($N = 4{,}482$) is less susceptible: it matches or nearly matches the baseline at $\lambda \le 1$ for most dataset sizes, but still traps occasionally at larger $D$.
+    \item No value of $\lambda$ consistently improves over the plain baseline.
+    \item The pattern is non-monotonic in $\lambda$: trapping depends on the interaction between prior strength, model capacity, and random seed --- unlike the midpoint prior's smooth dose--response curve.
 \end{itemize}
+
+\paragraph{Individual seed analysis.}
+Examining per-seed results at $\lambda = 0.1$ (large model) reveals the bimodal structure:
+
+\begin{center}
+\small
+\begin{tabular}{lcccc}
+\toprule
+$D$ & Seed 101 & Seed 202 & Seed 303 & Trap rate \\
+\midrule
+128  & 0.003 \checkmark & 0.081 $\times$ & 0.003 \checkmark & 1/3 \\
+1024 & 0.088 $\times$ & 0.001 \checkmark & 0.095 $\times$ & 2/3 \\
+4096 & 0.099 $\times$ & 0.001 \checkmark & 0.001 \checkmark & 1/3 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The trap error ($\approx 0.09$) is a genuine bad local minimum, not a failure to train: an untrained large model gives test error $\approx 0.32$.
+
+\paragraph{Interpretation.}
+The conservation constraint $H(\hat{\bm{x}}_T) = H(\bm{x}_0)$ restricts predictions to a 1-dimensional level curve of $H$.
+While this manifold contains the correct target, the conservation loss gradient is degenerate along the manifold direction (zero component tangent to the level curve).
+This creates ridge-like structures in the combined loss landscape.
+Larger models, with their higher-dimensional parameter space, appear more susceptible to these spurious attractors.
 
 \subsection{Comparative scaling-law fits}
 
 \begin{table}[H]
     \centering
-    \caption{Fitted scaling parameters across the three models.
-    The combined fit uses all $(N,D)$ configurations.}
+    \caption{Fitted scaling parameters and failure modes across the three models.}
     \label{tab:scaling-params}
     \begin{tabular}{lcccc}
         \toprule
@@ -395,7 +436,7 @@ The key questions are whether the prior:
         \midrule
         Plain MLP           & $\approx 0$  & 0.91 & 0.85 & Clean power-law scaling \\
         PIML (midpoint)     & $\approx 0.011$ & 0.16 & 0.53 & Dominated by biased prior \\
-        PIML (conservation) & \pending{--} & \pending{--} & \pending{--} & \pending{conservation sweep} \\
+        PIML (conservation) & \multicolumn{3}{c}{N/A (bimodal failure)} & Optimization traps prevent fitting \\
         \bottomrule
     \end{tabular}
 \end{table}
@@ -405,7 +446,10 @@ The key questions are whether the prior:
 All 720 runs (360 plain + 360 midpoint PIML) completed without divergence or NaN across the full $(N, D)$ grid.
 The midpoint PIML model early-stops substantially earlier: best-epoch values are typically 50--100 versus 300--500 for the plain model, consistent with the optimizer saturating at the physics-loss plateau.
 
-\pending{Add conservation-law stability data.}
+The conservation-law prior introduces a distinct stability concern: not divergence, but bimodal convergence.
+Approximately 40--70\% of large-model seeds trap in a bad local minimum at test error $\approx 0.09$, while the remainder converge normally.
+The small model shows lower trap rates but is not immune.
+This stochastic failure mode is qualitatively different from the midpoint prior's deterministic degradation.
 
 \begin{figure}[H]
     \centering
@@ -453,7 +497,7 @@ Key observations:
 The $\lambda = 0$ path reproduces the plain model bit-for-bit, confirming correct implementation.
 The monotonic dose--response pattern rules out isolated hyperparameter failure and is consistent with a biased prior.
 
-\pending{Add conservation-law lambda sweep results in same format.}
+The conservation-law $\lambda$ sweep results are presented in \cref{sec:results-conservation} and show a qualitatively different pattern: non-monotonic, seed-dependent trapping rather than smooth degradation.
 
 %% ================================================================
 %%  DISCUSSION
@@ -467,11 +511,13 @@ The central finding so far is that the scaling-law framework provides qualitativ
 \begin{itemize}[leftmargin=*]
     \item \textbf{Biased prior (midpoint residual):} elevated error floor ($\hat{E}_\infty \approx 0.011$), shallow exponents ($\hat{\alpha} \approx 0.16$, $\hat{\beta} \approx 0.53$), early stopping at a physics-dominated plateau.
     The scaling law detects a prior--task mismatch.
-    \item \textbf{Exact prior (conservation law):} \pending{fill in after conservation sweep}.
+    \item \textbf{Exact prior (conservation law):} no elevated error floor when optimization succeeds, but stochastic trapping at test error $\approx 0.09$ for $\sim$40--70\% of large-model seeds.
+    The failure is capacity-dependent (worse for larger models) and non-monotonic in $\lambda$.
+    Scaling-law fitting is unreliable because the bimodal error distribution violates the smooth power-law assumption.
 \end{itemize}
 
 This demonstrates that scaling laws are not merely a summarization tool---they can serve as a diagnostic for whether a physics prior is well-matched to the learning task.
-A biased prior does not simply fail to help; it actively distorts the scaling surface in a characteristic and interpretable way.
+A biased prior distorts the scaling surface deterministically, while an exact-but-misspecified prior (providing only a scalar constraint on a 2D output) creates optimization pathology that manifests as stochastic failure at scale.
 
 \subsection{Why the midpoint prior fails}
 
@@ -512,7 +558,8 @@ Conclusions should not be overgeneralized to PDE learning, chaotic systems, or m
     \item It focuses on fixed-horizon prediction ($T = 1.0$) rather than long autoregressive rollout.
     \item It uses noise-free synthetic data.
     \item The scaling-law ansatz \cref{eq:scaling} is a descriptive approximation, not a theoretical prediction.
-    \item \pending{If conservation results are null: note that the exact prior (conservation law) constrains only one scalar quantity, leaving the model underconstrained along the conserved manifold.}
+    \item The exact conservation-law prior constrains only one scalar quantity ($H$), leaving the model underconstrained along the conserved manifold. A prior that constrains the full state (e.g., multi-step collocation) might behave differently.
+    \item The conservation prior's bimodal failure might be ameliorated by optimization techniques (warm-starting, gradient clipping, adaptive $\lambda$ scheduling) not tested here.
 \end{enumerate}
 
 %% ================================================================
@@ -522,10 +569,12 @@ Conclusions should not be overgeneralized to PDE learning, chaotic systems, or m
 
 We introduced a controlled study for evaluating whether simple physics priors change empirical scaling behavior in scientific machine learning.
 Using fixed-horizon Lotka--Volterra flow-map prediction, we compared a plain MLP against an ODE-residual prior and a conservation-law prior across model capacity and dataset size.
-The scaling-law framework reveals qualitatively different signatures: the biased midpoint prior raises the error floor and flattens scaling exponents, while the exact conservation prior \pending{state outcome}.
+The scaling-law framework reveals qualitatively different signatures: the biased midpoint prior raises the error floor and flattens scaling exponents, while the exact conservation prior introduces bimodal optimization failures that worsen with model capacity.
+Neither prior improves over the plain baseline at any tested configuration.
 
 The main contribution is methodological.
-Scaling laws serve not only as a compact summary of learning behavior, but as a diagnostic tool that distinguishes well-matched priors from mismatched ones.
+Scaling laws serve not only as a compact summary of learning behavior, but as a diagnostic tool that distinguishes qualitatively different failure modes.
+A biased prior produces a deterministic, dose-responsive degradation pattern amenable to scaling-law fitting; an exact prior that is informationally insufficient (constraining a scalar invariant on a vector-valued output) creates stochastic optimization pathology that breaks the smooth scaling assumption.
 This perspective---treating scaling behavior itself as the object of study---supports a more principled and reproducible basis for evaluating physical inductive biases in scientific machine learning.
 
 \section*{Acknowledgments}
@@ -566,7 +615,11 @@ The midpoint physics loss has an irreducible floor $\sim\!50{,}000\times$ larger
 No value of $\lambda$ can fix this: small $\lambda$ makes the prior invisible; large $\lambda$ drives the optimizer toward the biased proxy.
 This creates a characteristic dose--response degradation pattern (\cref{tab:lambda-midpoint}) that is a hallmark of prior--task mismatch.
 
-\pending{Add equivalent lambda-sweep data for conservation prior.}
+The conservation-law prior shows a contrasting pattern.
+Because $\mathcal{L}_{\mathrm{cons}}^* \approx 10^{-14}$, there is no irreducible floor.
+However, the conservation constraint is informationally weak: it constrains a single scalar invariant $H$ on a 2-dimensional output.
+The resulting loss landscape contains spurious local minima along the conserved manifold, producing bimodal convergence rather than smooth degradation.
+The conservation $\lambda$ sweep (\cref{sec:results-conservation}) exhibits non-monotonic, seed-dependent behavior that cannot be characterized by the same dose--response framework as the midpoint prior.
 
 \section{Conservation-Law Prior: Details}
 \label{app:conservation-details}
@@ -578,7 +631,13 @@ H(u,v) = \delta u - \gamma \ln u + \beta v - \alpha \ln v.
 The conservation loss penalizes $(\Delta H)^2 = (H(\hat{\bm{x}}_T) - H(\bm{x}_0))^2$.
 On ground-truth data, $|\Delta H| / |H| \approx 10^{-7}$, confirming the prior is exact to within numerical integration tolerances.
 
-\pending{Add architecture details, hyperparameter tables, and any additional ablation results from the conservation sweep.}
+The conservation loss operates in physical (denormalized) space.
+Float32 normalization roundtrip introduces $\sim 10^{-7}$ maximum error, which is negligible.
+All training data satisfies strict positivity ($u > 0$, $v > 0$), ensuring the logarithmic terms in $H$ are well-defined.
+No negative predictions were observed from untrained models within the tested initial-condition domain $[0.5, 2.5]^2$.
+
+The bimodal optimization failure described in \cref{sec:results-conservation} is not caused by numerical issues in the loss computation, but by the geometric structure of the conservation constraint: $H(u,v) = c$ defines a closed curve in $(u,v)$ space, and the conservation gradient is zero along this curve.
+This creates a degenerate direction in the combined loss landscape that becomes problematic as model capacity increases.
 
 %% ================================================================
 %%  BIBLIOGRAPHY

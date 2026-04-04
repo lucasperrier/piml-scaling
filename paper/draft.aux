@@ -19,7 +19,7 @@
 \@writefile{toc}{\contentsline {section}{\numberline {2}Related Work}{2}{section.2}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {2.1}Physics-informed scientific machine learning}{2}{subsection.2.1}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {2.2}Empirical scaling laws}{2}{subsection.2.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {2.3}Scaling as an evaluation lens for SciML}{2}{subsection.2.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.3}Scaling as an evaluation lens for SciML}{3}{subsection.2.3}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {3}Problem Setting}{3}{section.3}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Task formulation}{3}{subsection.3.1}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Lotka--Volterra dynamics}{3}{subsection.3.2}\protected@file@percent }
@@ -30,8 +30,8 @@
 \newlabel{eq:lv-invariant}{{3}{3}{Lotka--Volterra dynamics}{equation.3.3}{}}
 \newlabel{eq:lv-invariant@cref}{{[equation][3][]3}{[1][3][]3}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Data generation}{3}{subsection.3.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {4}Models}{3}{section.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Plain MLP baseline}{3}{subsection.4.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {4}Models}{4}{section.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Plain MLP baseline}{4}{subsection.4.1}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Capacity grid}{4}{subsection.4.2}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.3}ODE-residual prior (midpoint)}{4}{subsection.4.3}\protected@file@percent }
 \newlabel{sec:midpoint-prior}{{4.3}{4}{ODE-residual prior (midpoint)}{subsection.4.3}{}}
@@ -39,8 +39,8 @@
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.4}Conservation-law prior}{4}{subsection.4.4}\protected@file@percent }
 \newlabel{sec:conservation-prior}{{4.4}{4}{Conservation-law prior}{subsection.4.4}{}}
 \newlabel{sec:conservation-prior@cref}{{[subsection][4][4]4.4}{[1][4][]4}}
-\@writefile{toc}{\contentsline {section}{\numberline {5}Experimental Design}{4}{section.5}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}Scaling axes}{4}{subsection.5.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {5}Experimental Design}{5}{section.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}Scaling axes}{5}{subsection.5.1}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {5.2}Evaluation metric}{5}{subsection.5.2}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {5.3}Scaling-law ansatz}{5}{subsection.5.3}\protected@file@percent }
 \newlabel{eq:scaling}{{4}{5}{Scaling-law ansatz}{equation.5.4}{}}
@@ -48,10 +48,10 @@
 \@writefile{toc}{\contentsline {subsection}{\numberline {5.4}Statistical protocol}{5}{subsection.5.4}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {5.5}Training details}{5}{subsection.5.5}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {6}Research Questions}{5}{section.6}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {7}Results}{5}{section.7}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {7.1}Plain MLP baseline: scaling behavior}{5}{subsection.7.1}\protected@file@percent }
-\newlabel{sec:results-plain}{{7.1}{5}{Plain MLP baseline: scaling behavior}{subsection.7.1}{}}
-\newlabel{sec:results-plain@cref}{{[subsection][1][7]7.1}{[1][5][]5}}
+\@writefile{toc}{\contentsline {section}{\numberline {7}Results}{6}{section.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.1}Plain MLP baseline: scaling behavior}{6}{subsection.7.1}\protected@file@percent }
+\newlabel{sec:results-plain}{{7.1}{6}{Plain MLP baseline: scaling behavior}{subsection.7.1}{}}
+\newlabel{sec:results-plain@cref}{{[subsection][1][7]7.1}{[1][5][]6}}
 \@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Data scaling for the plain MLP baseline. Test error decreases as a power law with exponent $\hat  {\beta } \approx 0.85$.}}{6}{figure.1}\protected@file@percent }
 \newlabel{fig:plain-data-scaling}{{1}{6}{Data scaling for the plain MLP baseline. Test error decreases as a power law with exponent $\hat {\beta } \approx 0.85$}{figure.1}{}}
 \newlabel{fig:plain-data-scaling@cref}{{[figure][1][]1}{[1][6][]6}}
@@ -60,42 +60,47 @@
 \newlabel{sec:results-midpoint@cref}{{[subsection][2][7]7.2}{[1][6][]6}}
 \@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Comparative data scaling for the plain and midpoint-residual models at large capacity. The PIML model saturates at the physics-loss floor.}}{7}{figure.2}\protected@file@percent }
 \newlabel{fig:midpoint-vs-plain}{{2}{7}{Comparative data scaling for the plain and midpoint-residual models at large capacity. The PIML model saturates at the physics-loss floor}{figure.2}{}}
-\newlabel{fig:midpoint-vs-plain@cref}{{[figure][2][]2}{[1][6][]7}}
+\newlabel{fig:midpoint-vs-plain@cref}{{[figure][2][]2}{[1][7][]7}}
 \@writefile{toc}{\contentsline {paragraph}{Interpretation.}{7}{section*.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {7.3}Conservation-law prior: exact scaling}{7}{subsection.7.3}\protected@file@percent }
-\newlabel{sec:results-conservation}{{7.3}{7}{Conservation-law prior: exact scaling}{subsection.7.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.3}Conservation-law prior: bimodal optimization failure}{7}{subsection.7.3}\protected@file@percent }
+\newlabel{sec:results-conservation}{{7.3}{7}{Conservation-law prior: bimodal optimization failure}{subsection.7.3}{}}
 \newlabel{sec:results-conservation@cref}{{[subsection][3][7]7.3}{[1][7][]7}}
-\@writefile{toc}{\contentsline {paragraph}{Expected contrast.}{7}{section*.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Key observations.}{8}{section*.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Individual seed analysis.}{8}{section*.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Interpretation.}{8}{section*.4}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {7.4}Comparative scaling-law fits}{8}{subsection.7.4}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Fitted scaling parameters across the three models. The combined fit uses all $(N,D)$ configurations.}}{8}{table.1}\protected@file@percent }
-\newlabel{tab:scaling-params}{{1}{8}{Fitted scaling parameters across the three models. The combined fit uses all $(N,D)$ configurations}{table.1}{}}
-\newlabel{tab:scaling-params@cref}{{[table][1][]1}{[1][7][]8}}
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Fitted scaling parameters and failure modes across the three models.}}{8}{table.1}\protected@file@percent }
+\newlabel{tab:scaling-params}{{1}{8}{Fitted scaling parameters and failure modes across the three models}{table.1}{}}
+\newlabel{tab:scaling-params@cref}{{[table][1][]1}{[1][8][]8}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {7.5}Training stability}{8}{subsection.7.5}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Training duration (best epoch) across the $(N,D)$ grid. The midpoint PIML model early-stops much sooner due to the physics-loss plateau.}}{8}{figure.3}\protected@file@percent }
-\newlabel{fig:stability}{{3}{8}{Training duration (best epoch) across the $(N,D)$ grid. The midpoint PIML model early-stops much sooner due to the physics-loss plateau}{figure.3}{}}
-\newlabel{fig:stability@cref}{{[figure][3][]3}{[1][8][]8}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {7.6}Sensitivity to regularization strength}{8}{subsection.7.6}\protected@file@percent }
-\newlabel{sec:results-lambda}{{7.6}{8}{Sensitivity to regularization strength}{subsection.7.6}{}}
-\newlabel{sec:results-lambda@cref}{{[subsection][6][7]7.6}{[1][8][]8}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Training duration (best epoch) across the $(N,D)$ grid. The midpoint PIML model early-stops much sooner due to the physics-loss plateau.}}{9}{figure.3}\protected@file@percent }
+\newlabel{fig:stability}{{3}{9}{Training duration (best epoch) across the $(N,D)$ grid. The midpoint PIML model early-stops much sooner due to the physics-loss plateau}{figure.3}{}}
+\newlabel{fig:stability@cref}{{[figure][3][]3}{[1][8][]9}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.6}Sensitivity to regularization strength}{9}{subsection.7.6}\protected@file@percent }
+\newlabel{sec:results-lambda}{{7.6}{9}{Sensitivity to regularization strength}{subsection.7.6}{}}
+\newlabel{sec:results-lambda@cref}{{[subsection][6][7]7.6}{[1][9][]9}}
 \@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Midpoint-prior $\lambda _{\mathrm  {phys}}$ sweep: test relative $\ell _2$ error (mean over 9 replicates).}}{9}{table.2}\protected@file@percent }
 \newlabel{tab:lambda-midpoint}{{2}{9}{Midpoint-prior $\lambda _{\mathrm {phys}}$ sweep: test relative $\ell _2$ error (mean over 9 replicates)}{table.2}{}}
-\newlabel{tab:lambda-midpoint@cref}{{[table][2][]2}{[1][8][]9}}
-\@writefile{toc}{\contentsline {section}{\numberline {8}Discussion}{9}{section.8}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {8.1}Scaling signatures as prior diagnostics}{9}{subsection.8.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {8.2}Why the midpoint prior fails}{9}{subsection.8.2}\protected@file@percent }
+\newlabel{tab:lambda-midpoint@cref}{{[table][2][]2}{[1][9][]9}}
 \citation{bahri2024}
 \citation{lu2021elliptic}
+\@writefile{toc}{\contentsline {section}{\numberline {8}Discussion}{10}{section.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.1}Scaling signatures as prior diagnostics}{10}{subsection.8.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.2}Why the midpoint prior fails}{10}{subsection.8.2}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {8.3}Relationship to the broader research program}{10}{subsection.8.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {8.4}Why Lotka--Volterra?}{10}{subsection.8.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {9}Limitations}{10}{section.9}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.4}Why Lotka--Volterra?}{11}{subsection.8.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {9}Limitations}{11}{section.9}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {10}Conclusion}{11}{section.10}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {A}Physics-Loss Weight Diagnostic}{11}{appendix.A}\protected@file@percent }
-\newlabel{app:lambda-diagnostic}{{A}{11}{Physics-Loss Weight Diagnostic}{appendix.A}{}}
-\newlabel{app:lambda-diagnostic@cref}{{[appendix][1][2147483647]A}{[1][11][]11}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {A.1}Motivation}{11}{subsection.A.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {A.2}Implementation equivalence control}{11}{subsection.A.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {A.3}Ground-truth residual}{11}{subsection.A.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {A.4}Interpretation}{11}{subsection.A.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {A}Physics-Loss Weight Diagnostic}{12}{appendix.A}\protected@file@percent }
+\newlabel{app:lambda-diagnostic}{{A}{12}{Physics-Loss Weight Diagnostic}{appendix.A}{}}
+\newlabel{app:lambda-diagnostic@cref}{{[appendix][1][2147483647]A}{[1][12][]12}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {A.1}Motivation}{12}{subsection.A.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {A.2}Implementation equivalence control}{12}{subsection.A.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {A.3}Ground-truth residual}{12}{subsection.A.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {A.4}Interpretation}{12}{subsection.A.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {B}Conservation-Law Prior: Details}{12}{appendix.B}\protected@file@percent }
+\newlabel{app:conservation-details}{{B}{12}{Conservation-Law Prior: Details}{appendix.B}{}}
+\newlabel{app:conservation-details@cref}{{[appendix][2][2147483647]B}{[1][12][]12}}
 \bibstyle{plain}
 \bibcite{bahri2024}{1}
 \bibcite{chen2018node}{2}
@@ -111,7 +116,4 @@
 \bibcite{rosenfeld2019}{12}
 \bibcite{wang2022ntk}{13}
 \bibcite{willard2022}{14}
-\@writefile{toc}{\contentsline {section}{\numberline {B}Conservation-Law Prior: Details}{12}{appendix.B}\protected@file@percent }
-\newlabel{app:conservation-details}{{B}{12}{Conservation-Law Prior: Details}{appendix.B}{}}
-\newlabel{app:conservation-details@cref}{{[appendix][2][2147483647]B}{[1][11][]12}}
 \gdef \@abspage@last{13}

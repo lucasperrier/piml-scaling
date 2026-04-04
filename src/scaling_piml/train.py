@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from .config import ExperimentConfig
-from .losses import mse_loss, total_loss, total_loss_conservation
+from .losses import mse_loss, total_loss, total_loss_conservation, total_loss_composite
 from .metrics import mse, relative_l2
 from .models.mlp import MLP, parameter_count
 from .utils.io import ensure_dir, save_json, save_yaml
@@ -33,7 +33,7 @@ def _physical_batch(loader: DataLoader, x: torch.Tensor, y: torch.Tensor, yhat: 
 
 
 @torch.no_grad()
-def evaluate(model: torch.nn.Module, loader: DataLoader, device: torch.device) -> dict[str, float]:
+def evaluate(model: torch.nn.Module, loader: DataLoader, device: torch.device, *, slice_last2: bool = False) -> dict[str, float]:
     model.eval()
     rels = []
     mses = []
@@ -41,6 +41,8 @@ def evaluate(model: torch.nn.Module, loader: DataLoader, device: torch.device) -
         x = x.to(device)
         y = y.to(device)
         yhat = model(x)
+        if slice_last2:
+            yhat = yhat[:, 2:]
         _, y_phys, yhat_phys = _physical_batch(loader, x, y, yhat)
         rels.append(relative_l2(yhat_phys, y_phys).detach().cpu())
         mses.append(mse(yhat_phys, y_phys).detach().cpu())
@@ -73,9 +75,10 @@ def train_one_run(
 
     device = _device()
 
+    out_dim = 4 if physics_prior == "simpson" else 2
     model = MLP(
         2,
-        2,
+        out_dim,
         hidden_widths=cfg.model.hidden_widths,
         activation=cfg.model.activation,
     ).to(device)
@@ -159,6 +162,29 @@ def train_one_run(
                     losses.append(parts["loss"])
                     data_losses.append(parts["data"])
                     phys_losses.append(parts["phys"])
+                elif physics_prior == "simpson":
+                    # pred is (B, 4): first 2 = u_{T/2}, last 2 = u_T
+                    ds = train_loader.dataset
+                    x_phys = ds.denormalize_inputs(x) if hasattr(ds, "denormalize_inputs") else x
+                    pred_T2_phys = ds.denormalize_targets(pred[:, :2])
+                    pred_T_phys = ds.denormalize_targets(pred[:, 2:])
+                    L, parts = total_loss_composite(
+                        pred_full=pred,
+                        pred_target=pred[:, 2:],
+                        target=y,
+                        u0=x_phys,
+                        uT2_hat_phys=pred_T2_phys,
+                        uT_hat_phys=pred_T_phys,
+                        T=cfg.data.T,
+                        alpha=cfg.system.alpha,
+                        beta=cfg.system.beta,
+                        delta=cfg.system.delta,
+                        gamma=cfg.system.gamma,
+                        lambda_phys=cfg.train.lambda_phys,
+                    )
+                    losses.append(parts["loss"])
+                    data_losses.append(parts["data"])
+                    phys_losses.append(parts["phys"])
                 else:
                     L = mse_loss(pred, y)
                     loss_val = float(L.detach().cpu())
@@ -182,7 +208,7 @@ def train_one_run(
             if diverged:
                 break
 
-            val_metrics = evaluate(model, val_loader, device)
+            val_metrics = evaluate(model, val_loader, device, slice_last2=(physics_prior == "simpson"))
 
             avg_data = float(sum(data_losses) / max(1, len(data_losses)))
             avg_phys = float(sum(phys_losses) / max(1, len(phys_losses)))
@@ -220,9 +246,10 @@ def train_one_run(
         ckpt = torch.load(checkpoint_path, map_location=device)
         model.load_state_dict(ckpt["state_dict"])
 
-    train_metrics = evaluate(model, train_loader, device)
-    val_metrics = evaluate(model, val_loader, device)
-    test_metrics = evaluate(model, test_loader, device)
+    _is_composite = (physics_prior == "simpson")
+    train_metrics = evaluate(model, train_loader, device, slice_last2=_is_composite)
+    val_metrics = evaluate(model, val_loader, device, slice_last2=_is_composite)
+    test_metrics = evaluate(model, test_loader, device, slice_last2=_is_composite)
 
     scalar_metrics = {
         "train_rel_l2": float(train_metrics["rel_l2"]),

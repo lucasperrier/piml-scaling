@@ -8,12 +8,39 @@ This repository implements a minimal, reproducible experiment for a first founda
 
 The project is intentionally narrow. It is designed to produce one clean paper-quality result, not a broad SciML benchmark suite.
 
+## Current status (2026-04-04)
+
+### Completed experiments
+- **Full scaling sweep**: 720 runs (plain + midpoint PIML) × 5 capacities × 8 dataset sizes × 3 data seeds × 3 train seeds
+- **Midpoint λ sweep**: 324 runs across 6 λ values
+- **Conservation λ sweep**: 126 runs across 7 λ values
+- **Data validation**: solver accuracy, conservation law, normalization, positivity, injectivity all verified
+
+### Key findings
+| Model | E∞ | α (capacity) | β (data) | Status |
+|-------|-----|------|------|--------|
+| Plain MLP | ≈ 0 | 0.91 | 0.85 | Clean power-law scaling |
+| PIML (midpoint) | ≈ 0.011 | 0.16 | 0.53 | Degraded by 15% irreducible prior bias |
+| PIML (conservation) | — | — | — | Bimodal optimization failure (trapping at ~0.09 for large models) |
+
+The midpoint-rule ODE residual prior **degrades** scaling at all tested configurations due to irreducible approximation error at T=1.0.
+The exact conservation-law prior exhibits a **bimodal training failure**: large models frequently trap in a bad local minimum at ~0.09 test error. No λ value consistently improves over the plain baseline.
+
+### Data validation summary
+- Solver accuracy: max relative error ~1.9e-9 (DOP853, rtol=1e-9, atol=1e-11)
+- Conservation law on data: max |ΔH|/|H| ~2.0e-9
+- Float32 normalization roundtrip: max error ~1e-7
+- All data strictly positive; flow map injective (T/period ≈ 0.30)
+- Oscillation period ~3.1–3.5; T=1.0 gives 0.92 mean relative displacement
+- Flow map Lipschitz constant: max ~3.67, mean ~1.54
+
 ## Scope
 
 ### Included in v1
 - System: Lotka–Volterra ODE
 - Task: fixed-horizon flow-map prediction
-- Models: plain MLP and physics-regularized MLP
+- Models: plain MLP, midpoint-residual MLP, conservation-law MLP
+- Physics priors: midpoint-rule ODE residual (approximate), conservation law H invariant (exact)
 - Scaling axes: model capacity `N` and dataset size `D`
 - Primary metric: relative L2 error at prediction horizon `T`
 
@@ -114,7 +141,7 @@ Normalization:
 - Activation: ReLU or GELU
 - Use one consistent architecture family across all runs
 
-### Physics-regularized MLP
+### Physics-regularized MLP (midpoint residual)
 
 Same architecture as the plain MLP. Only the loss changes.
 Loss terms (with a single physics weight $\lambda$):
@@ -136,6 +163,30 @@ Loss terms (with a single physics weight $\lambda$):
 
 Default:
 - `lambda_phys = 0.1`
+
+**Status**: Irreducible ground-truth residual ~15% at T=1.0. Degrades performance at all λ ≥ 0.01.
+
+### Physics-regularized MLP (conservation law)
+
+Same architecture. Loss uses the Lotka–Volterra first integral:
+
+\[
+H(u,v) = \delta u - \gamma \ln u + \beta v - \alpha \ln v
+\]
+
+- Conservation loss:
+  \[
+  \mathcal{L}_{\text{cons}} = \left( H(\hat{u}(T)) - H(u_0) \right)^2
+  \]
+
+- Total loss:
+  \[
+  \mathcal{L} = \mathcal{L}_{\text{data}} + \lambda\,\mathcal{L}_{\text{cons}}
+  \]
+
+Ground-truth residual: ~3.4e-14 (exact to machine precision).
+
+**Status**: Bimodal optimization failure. Large models trap at ~0.09 test error on most seeds. No λ consistently improves over plain.
 
 ## Capacity grid
 
@@ -165,19 +216,27 @@ Default:
 
 ## Experiment matrix
 
-Full matrix: `2` models × `5` capacities × `8` dataset sizes × `3` data seeds × `3` train seeds
+### Full scaling sweep (completed)
+`2` models (plain + midpoint PIML) × `5` capacities × `8` dataset sizes × `3` data seeds × `3` train seeds
 
 $$2 \times 5 \times 8 \times 3 \times 3 = 720\text{ runs}$$
 
-Reduced acceptable matrix: `2` models × `4` capacities × `6` dataset sizes × `2` data seeds × `3` train seeds
+### Midpoint lambda sweep (completed)
+`6` λ values × `2` capacities × `3` dataset sizes × `3` data seeds × `3` train seeds = **324 runs**
 
-$$2 \times 4 \times 6 \times 2 \times 3 = 288\text{ runs}$$
+### Conservation lambda sweep (completed)
+`7` λ values × `2` capacities × `3` dataset sizes × `1` data seed × `3` train seeds = **126 runs**
+
+### Remaining
+- [ ] Conservation full scaling sweep (pending: no beneficial λ found)
+- [ ] Figure generation
 
 ## Metrics
 
 ```text
 model_name
 is_physics_informed
+physics_prior          # "none", "midpoint", or "conservation"
 parameter_count
 dataset_size
 data_seed

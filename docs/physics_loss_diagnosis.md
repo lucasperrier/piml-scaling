@@ -115,20 +115,140 @@ Early stopping (patience=50 on val_rel_l2) kicks in once the model saturates at 
 
 4. **Consider collocation-based physics loss**: Instead of a single midpoint evaluation, use multiple collocation points along the trajectory to reduce quadrature bias.
 
-## 7. Files Created/Modified
+## 7. Conservation-Law Prior: Lambda Sweep Results (2026-04-04)
+
+A conservation-law prior was implemented as an alternative to the midpoint residual:
+
+$$\mathcal{L}_{\text{cons}} = (H(\hat{u}_T) - H(u_0))^2, \quad H(u,v) = \delta u - \gamma \ln u + \beta v - \alpha \ln v$$
+
+**Ground-truth validation**: $\mathcal{L}_{\text{cons}}^* \approx 3.4 \times 10^{-14}$ (exact to machine precision, vs 0.151 for midpoint).
+
+### Lambda sweep: 7 λ values × 2 capacities × 3 dataset sizes × 1 data seed × 3 train seeds = 126 runs
+
+#### Key result: bimodal optimization failure
+
+Unlike the midpoint prior (which shows monotonic degradation), the conservation prior exhibits a **bimodal failure mode**:
+- Some seeds converge to the correct basin (error ≈ plain baseline)
+- Other seeds trap in a **bad local minimum at ~0.09 test_rel_l2** (vs 0.32 for untrained model)
+
+The large model [256, 256] is highly susceptible to trapping across all λ values and dataset sizes.
+
+#### Results by condition (mean over 3 train seeds)
+
+| λ | Cap | D | Mean test_rel_l2 | Ratio to plain |
+|---|-----|---|-----------------|----------------|
+| 0.0 | small | 128 | 0.0061 | 1.00 |
+| 0.0 | small | 1024 | 0.0022 | 1.00 |
+| 0.0 | small | 4096 | 0.0013 | 1.00 |
+| 0.0 | large | 128 | 0.0028 | 1.00 |
+| 0.0 | large | 1024 | 0.0008 | 1.00 |
+| 0.0 | large | 4096 | 0.0008 | 1.00 |
+| 0.01 | small | 1024 | 0.0021 | 0.99 |
+| 1.0 | small | 4096 | 0.0013 | 1.00 |
+| 1.0 | large | 128 | 0.0030 | 1.07 |
+| 0.0001 | large | 128 | **0.0885** | **31.4** |
+| 0.0001 | large | 1024 | **0.0869** | **105.3** |
+| 0.0001 | large | 4096 | **0.0906** | **119.1** |
+| 10.0 | large | 128 | **0.2778** | **98.7** |
+
+#### Individual seed analysis (large model, λ=0.1)
+
+| D | Seed 101 | Seed 202 | Seed 303 |
+|---|----------|----------|----------|
+| 128 | 0.003 ✓ | 0.081 ✗ | 0.003 ✓ |
+| 1024 | 0.088 ✗ | 0.001 ✓ | 0.095 ✗ |
+| 4096 | 0.099 ✗ | 0.001 ✓ | 0.001 ✓ |
+
+The trap error (~0.09) is a **bad local minimum**, not a failure to train (untrained model gives ~0.32).
+
+### Diagnosis: two distinct failure mechanisms
+
+| Prior | Failure type | Mechanism | Character |
+|-------|-------------|-----------|-----------|
+| Midpoint | Irreducible bias | 15% approximation error on ground truth creates error floor | Deterministic, universal, dose-responsive |
+| Conservation | Optimization pathology | Exact prior creates bad local minima in loss landscape | Stochastic, seed-dependent, capacity-dependent |
+
+### Why the conservation prior traps
+
+The conservation law $H(\hat{u}_T) = H(u_0)$ constrains predictions to a 1D manifold (level curve of H).
+The data loss picks the correct point on this manifold, but the conservation loss gradient is **tangent to the manifold** (zero along the conserved direction).
+This creates a ridge structure in the combined loss landscape with many spurious local minima.
+Larger models (more parameters) are more susceptible because they have a richer space of saddle points and local minima near the conservation manifold.
+
+## 8. Data Validation (2026-04-04)
+
+Comprehensive data validation confirms the learning task and data pipeline are correct:
+
+### Solver accuracy
+- Re-integration at tighter tolerances (rtol=1e-12, atol=1e-14): max relative error 1.9e-9
+- Cross-seed spot checks: all verified to ~1e-10
+
+### Conservation law on data
+- Max |ΔH|/|H₀|: 2.0e-9
+- Mean |ΔH|/|H₀|: 1.5e-10
+
+### Normalization
+- Stats match recomputed values exactly
+- Normalized data: mean ≈ [0, 0], std = [1, 1]
+- Float32 roundtrip error: max ~1e-7
+
+### Positivity and domain
+- All u₀ > 0 and uT > 0 (required for log in conservation loss)
+- No negative predictions from untrained models in the tested range
+- uT predator range: [0.069, 1.52] (22× dynamic range — hardest component)
+
+### Flow map properties
+- Injective: 0 suspicious pairs among 5000 samples (T < period guarantees this)
+- Lipschitz: max ratio ~3.67, mean ~1.54 (well-conditioned)
+- Period ~3.1–3.5; T/period ≈ 0.29–0.34 (well inside one orbit)
+
+### Horizon assessment
+| T | T/Period | Displacement | Midpoint bias | Regime |
+|---|----------|-------------|--------------|--------|
+| 0.10 | 0.03 | 0.12 | tiny | Near-linear (too easy) |
+| 0.25 | 0.08 | 0.27 | small | Easy |
+| 0.50 | 0.15 | 0.48 | moderate | Medium |
+| **1.00** | **~0.30** | **0.92** | **12.8%** | **Nonlinear (good)** |
+| 2.00 | ~0.60 | 2.13 | very large | Harder |
+| 3.00 | ~0.90 | 0.62 | Near full orbit |
+
+T=1.0 is appropriate: strong nonlinearity, injective flow map, moderate conditioning.
+
+### Single-step integrator accuracy on truth
+| Method | Mean relative error |
+|--------|-------------------|
+| Forward Euler | 0.855 |
+| Implicit midpoint | 0.128 |
+| RK4 | 0.239 |
+| Explicit midpoint (4 steps) | 0.017 |
+| Explicit midpoint (16 steps) | 0.001 |
+
+### Baselines
+- Predict-mean baseline: 35.1% mean relative error
+- Identity baseline (predict u₀): 71.6% mean relative error
+- Linear regression R²: 0.89 (uT_x), 0.93 (uT_y)
+- Best plain MLP: 0.07% relative error (at large capacity, D=8192)
+
+## 9. Files Created/Modified
 
 ### New scripts
 - `scripts/diagnose_physics.py` — Ground-truth residual and loss-scale diagnostic
-- `scripts/run_lambda_sweep.py` — Lambda sweep runner
+- `scripts/run_lambda_sweep.py` — Lambda sweep runner (supports `--model piml|piml-conservation`)
 - `scripts/analyze_lambda_sweep.py` — Sweep aggregation and analysis
 
 ### Modified files
-- `src/scaling_piml/train.py` — Added `grad_norm` and `phys_data_ratio` columns to history.csv
-- `scripts/run_experiment.py` — Added `--lambda-phys` CLI override
-- `scripts/run_sweep.py` — Added `--lambda-phys` CLI override
+- `src/scaling_piml/losses.py` — Added `conservation_loss`, `_lv_invariant`, `total_loss_conservation`
+- `src/scaling_piml/train.py` — Added `physics_prior` parameter (`"none"`, `"midpoint"`, `"conservation"`); added `grad_norm` and `phys_data_ratio` columns to history.csv
+- `scripts/run_experiment.py` — Added `--lambda-phys` CLI override; supports `piml-conservation` model
+- `scripts/run_sweep.py` — Added `--lambda-phys` CLI override; supports `piml-conservation` model
+- `scripts/aggregate_runs.py` — Added `physics_prior` column to group keys
 
 ### Output artifacts
-- `runs-lambda-sweep/` — 324 run directories with full training histories
+- `runs/` — 720 run directories (full scaling sweep: plain + midpoint PIML)
+- `runs-progress/` — Aggregated CSV (`runs_aggregate.csv`, `grouped_metrics.csv`) and scaling fits (`scaling_fits.json`)
+- `runs-lambda-sweep/` — 324 run directories (midpoint λ sweep)
 - `runs-lambda-sweep/lambda_sweep_aggregate.csv` — Per-run metrics
 - `runs-lambda-sweep/lambda_sweep_grouped.csv` — Grouped means/stderrs
+- `runs-conservation-lambda-sweep/` — 126 run directories (conservation λ sweep)
 - `diagnostic_report.json` — Ground-truth residual diagnostics
+- `paper/draft.tex` — Working paper draft

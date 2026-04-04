@@ -47,7 +47,7 @@ def _run_dir(out_root: Path, model: str, capacity_name: str, dataset_size: int, 
     )
 
 
-_PRIOR_MAP = {"plain": "none", "piml": "midpoint", "piml-conservation": "conservation"}
+_PRIOR_MAP = {"plain": "none", "piml": "midpoint", "piml-conservation": "conservation", "piml-simpson": "simpson"}
 
 
 def _failure_metrics(*, model: str, capacity_name: str, hidden_widths: list[int], dataset_size: int, data_seed: int, train_seed: int, data_root: Path, run_dir: Path, reason: str) -> dict[str, object]:
@@ -124,7 +124,7 @@ def main() -> None:
     run_index = 0
 
     for model in models:
-        if model not in {"plain", "piml", "piml-conservation"}:
+        if model not in {"plain", "piml", "piml-conservation", "piml-simpson"}:
             raise ValueError(f"Unknown model: {model}")
         for capacity_name in capacities:
             if capacity_name not in CAPACITY_GRID:
