@@ -1,0 +1,662 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{amsmath, amssymb, amsthm, bm}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage[nameinlink,capitalise,noabbrev]{cleveref}
+\usepackage{authblk}
+\usepackage{setspace}
+\usepackage{xcolor}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue,
+  citecolor=blue,
+  urlcolor=blue
+}
+
+%% ----------------------------------------------------------------
+%%  DRAFT STATUS MARKERS
+%%  \status{text} — inline marker for incomplete items
+%%  \pending{text} — marks a section that needs data from a pending experiment
+%% ----------------------------------------------------------------
+\newcommand{\status}[1]{\textcolor{red}{\textbf{[#1]}}}
+\newcommand{\pending}[1]{\textcolor{orange}{\textbf{[PENDING: #1]}}}
+
+\title{Do Simple Physics Priors Change Empirical Scaling in Scientific Machine Learning?\\
+\large A Controlled Lotka--Volterra Case Study}
+
+\author[1]{Lucas Perrier}
+\affil[1]{Affiliation placeholder}
+\date{Draft --- \today}
+
+\begin{document}
+
+\maketitle
+
+%% ================================================================
+%%  ABSTRACT
+%% ================================================================
+\begin{abstract}
+Physics-informed learning methods are often evaluated at a small number of fixed model and dataset sizes, making it difficult to determine whether physical priors change learning behavior in a systematic way or merely improve performance in isolated settings.
+We present a controlled study that reframes this question through empirical scaling laws.
+Using fixed-horizon flow-map prediction on the Lotka--Volterra system, we compare a plain multilayer perceptron (MLP) against two physics-regularized variants---an ODE-residual prior and a conservation-law prior---across model capacity and dataset size.
+The scaling-law framework serves both as a performance summary and as a diagnostic tool: it reveals not only whether a prior helps, but whether it changes the shape of learning, and whether the prior itself is well-matched to the supervised task.
+We fit scaling relationships of the form
+\[
+E(N,D) \approx E_\infty + aN^{-\alpha} + bD^{-\beta},
+\]
+where $E$ is test error, $N$ is model capacity, and $D$ is dataset size.
+The ODE-residual prior, which incurs an irreducible approximation error at the tested horizon, degrades scaling uniformly and raises the error floor by an order of magnitude.
+The conservation-law prior, which is exact, \pending{conservation sweep results: state whether it improves data efficiency, changes exponents, or lowers error floor}.
+These contrasting outcomes demonstrate that empirical scaling laws can distinguish a well-matched physics prior from a mismatched one, providing a principled diagnostic beyond point-wise benchmark comparisons.
+\end{abstract}
+
+%% ================================================================
+%%  INTRODUCTION
+%% ================================================================
+\section{Introduction}
+
+Scientific machine learning (SciML) aims to combine data-driven models with scientific structure such as governing equations, invariants, symmetries, and conservation laws~\cite{willard2022,karpatne2022}.
+A central hope is that such structure improves data efficiency, robustness, and interpretability.
+However, comparisons between physics-informed and purely data-driven methods are often made at only a few fixed dataset sizes and model capacities.
+As a result, it remains unclear whether physics-informed priors change learning in a systematic way or simply shift performance in isolated experimental settings.
+
+In mainstream machine learning, empirical scaling laws have become a useful lens for understanding how test error changes as a function of model size, dataset size, and compute~\cite{kaplan2020,hestness2017}.
+By contrast, comparable scaling-based evaluation is still underdeveloped in SciML.
+This is a notable gap because scientific learning problems are especially sensitive to regime: task difficulty depends not only on sample count, but also on time horizon, parameter variability, discretization, optimization stability, and the form of the physical prior itself.
+
+This paper studies a controlled instance of that broader question.
+We consider fixed-horizon flow-map prediction on the Lotka--Volterra system and ask:
+
+\begin{quote}
+Does adding a simple physics prior measurably change empirical scaling behavior with respect to model capacity and dataset size?
+\end{quote}
+
+Crucially, we study \emph{two} physics priors on the same system and task: one that is an approximate proxy for the dynamics (a midpoint-rule ODE residual) and one that is an exact invariant (the Lotka--Volterra conservation law).
+This pairing allows us to go beyond ``does the prior help?'' and instead ask whether the scaling-law framework \emph{diagnoses} the quality of the prior itself.
+
+Our contributions are:
+
+\begin{enumerate}[leftmargin=*, itemsep=0.3em]
+    \item A minimal, reproducible scaling-law protocol for comparing data-only and physics-regularized models on a controlled dynamical system.
+    \item A two-axis scaling study over model capacity ($N$) and dataset size ($D$) for fixed-horizon flow-map prediction.
+    \item Empirical demonstration that scaling-law signatures distinguish a well-matched prior (exact conservation law) from a mismatched one (biased ODE residual), producing qualitatively different effects on exponents, error floors, and training stability.
+    \item A diagnostic methodology---complementing scaling fits with $\lambda$-sensitivity analysis and ground-truth residual checks---that can be reused in broader SciML evaluations.
+\end{enumerate}
+
+%% ================================================================
+%%  RELATED WORK
+%% ================================================================
+\section{Related Work}
+
+\subsection{Physics-informed scientific machine learning}
+
+Physics-informed learning methods inject scientific structure into machine learning models in several ways.
+Soft approaches typically introduce residual penalties derived from governing equations~\cite{raissi2019pinn,cuomo2022}.
+Harder approaches build physical structure directly into the architecture or parameterization~\cite{willard2022,chen2018node}.
+While these methods are widely studied, their evaluation is often benchmark-specific and restricted to a small number of scales.
+
+\subsection{Empirical scaling laws}
+
+Empirical scaling laws describe how performance changes as a function of data, model size, or compute.
+In natural language processing and vision, such laws have proven useful both descriptively and operationally~\cite{kaplan2020,hestness2017}.
+They provide a compact summary of learning efficiency and can reveal regime changes or diminishing returns.
+Recent work explains scaling phenomena through variance-limited and resolution-limited regimes~\cite{bahri2024}, while constructive models can predict generalization error across scales~\cite{rosenfeld2019}.
+
+\subsection{Scaling as an evaluation lens for SciML}
+
+The use of scaling laws in SciML is still limited.
+Theoretical work on neural scaling for elliptic PDEs has begun to establish generalization bounds~\cite{lu2021elliptic}, but these results are confined to specific PDE classes.
+There remains a need for controlled empirical work asking whether physical priors change the shape of learning curves in a reproducible and interpretable way.
+
+%% ================================================================
+%%  PROBLEM SETTING
+%% ================================================================
+\section{Problem Setting}
+
+\subsection{Task formulation}
+
+We study supervised fixed-horizon flow-map prediction for the Lotka--Volterra system.
+Let $\bm{x}(t) = (u(t), v(t)) \in \mathbb{R}^2$ denote the system state.
+Given an initial condition $\bm{x}_0$ and a fixed prediction horizon $T > 0$, the learning task is to approximate the flow map
+\[
+\Phi_T : \bm{x}_0 \mapsto \bm{x}(T).
+\]
+This formulation provides a well-defined supervised target while avoiding the confounding effects of long autoregressive rollout.
+
+\subsection{Lotka--Volterra dynamics}
+
+The Lotka--Volterra system is defined by
+\begin{align}
+\frac{du}{dt} &= \alpha u - \beta uv, \label{eq:lv-prey}\\
+\frac{dv}{dt} &= \delta uv - \gamma v, \label{eq:lv-pred}
+\end{align}
+where $u$ and $v$ denote prey and predator populations, and $\alpha,\beta,\gamma,\delta > 0$ are system parameters.
+We use fixed parameters $(\alpha,\beta,\delta,\gamma) = (1.5, 1.0, 1.0, 3.0)$ throughout.
+
+The system possesses an exact first integral (conservation law):
+\begin{equation}
+H(u,v) = \delta u - \gamma \ln u + \beta v - \alpha \ln v,
+\label{eq:lv-invariant}
+\end{equation}
+satisfying $H(\bm{x}(t)) = H(\bm{x}_0)$ for all $t$.
+This invariant plays a central role in our experimental design: it provides an \emph{exact} physics prior that can be contrasted with an \emph{approximate} one.
+
+\subsection{Data generation}
+
+Initial conditions are sampled uniformly from $[0.5, 2.5]^2$.
+Ground-truth flow maps are computed using the DOP853 solver (Dormand--Prince 8(5,3)) at tolerances $\texttt{rtol} = 10^{-9}$, $\texttt{atol} = 10^{-11}$, with prediction horizon $T = 1.0$.
+The dataset comprises 20{,}000 training pairs, 2{,}000 validation, and 2{,}000 test pairs.
+Training subsets of sizes $D \in \{64, 128, 256, 512, 1024, 2048, 4096, 8192\}$ are drawn as nested prefixes of the same shuffled training pool, ensuring that each smaller set is a subset of every larger one.
+Three independent data seeds (11, 22, 33) provide distinct pools.
+
+%% ================================================================
+%%  MODELS
+%% ================================================================
+\section{Models}
+
+\subsection{Plain MLP baseline}
+
+Our baseline is a standard multilayer perceptron (MLP) with ReLU activations:
+\[
+\hat{\bm{x}}_T = f_\phi(\bm{x}_0),
+\]
+trained to minimize the mean squared error
+\[
+\mathcal{L}_{\mathrm{data}} = \frac{1}{B}\sum_{i=1}^{B} \left\| f_\phi(\bm{x}_0^{(i)}) - \bm{x}_T^{(i)} \right\|_2^2.
+\]
+Input and output are standardized using training-set statistics; the loss is computed in normalized space.
+
+\subsection{Capacity grid}
+
+Model capacity $N$ (parameter count) is varied through a fixed architecture grid:
+
+\begin{center}
+\begin{tabular}{lcr}
+\toprule
+Name & Hidden widths & Parameters ($N$) \\
+\midrule
+Tiny   & $[32, 32]$        & 1{,}218 \\
+Small  & $[64, 64]$        & 4{,}482 \\
+Medium & $[128, 128]$      & 17{,}154 \\
+Large  & $[256, 256]$      & 67{,}074 \\
+XLarge & $[256, 256, 256]$ & 132{,}866 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{ODE-residual prior (midpoint)}
+\label{sec:midpoint-prior}
+
+The first physics-regularized model augments the data loss with a midpoint-rule ODE residual:
+\[
+\mathcal{L}_{\mathrm{total}} = \mathcal{L}_{\mathrm{data}} + \lambda_{\mathrm{phys}} \mathcal{L}_{\mathrm{mid}},
+\]
+where
+\[
+\mathcal{L}_{\mathrm{mid}} = \frac{1}{B}\sum_{i=1}^{B} \left\| \hat{\bm{x}}_T^{(i)} - \bm{x}_0^{(i)} - T \cdot F\!\left(\tfrac{\bm{x}_0^{(i)} + \hat{\bm{x}}_T^{(i)}}{2}\right) \right\|_2^2
+\]
+and $F$ is the Lotka--Volterra vector field from \cref{eq:lv-prey,eq:lv-pred}.
+This is a first-order implicit-midpoint quadrature approximation to the integral form of the ODE, computed on denormalized (physical) state variables.
+
+\subsection{Conservation-law prior}
+\label{sec:conservation-prior}
+
+The second physics-regularized model penalizes violation of the exact first integral:
+\[
+\mathcal{L}_{\mathrm{total}} = \mathcal{L}_{\mathrm{data}} + \lambda_{\mathrm{phys}} \mathcal{L}_{\mathrm{cons}},
+\]
+where
+\[
+\mathcal{L}_{\mathrm{cons}} = \frac{1}{B}\sum_{i=1}^{B} \left( H(\hat{\bm{x}}_T^{(i)}) - H(\bm{x}_0^{(i)}) \right)^2
+\]
+and $H$ is the invariant from \cref{eq:lv-invariant}.
+Unlike the midpoint residual, this prior has zero irreducible error: $\mathcal{L}_{\mathrm{cons}} = 0$ on exact flow-map targets.
+
+%% ================================================================
+%%  EXPERIMENTAL DESIGN
+%% ================================================================
+\section{Experimental Design}
+
+\subsection{Scaling axes}
+
+We vary two quantities systematically:
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Model capacity} $N$: five sizes from 1{,}218 to 132{,}866 parameters.
+    \item \textbf{Dataset size} $D$: eight sizes from 64 to 8{,}192 training samples.
+\end{itemize}
+The use of nested subsets reduces confounding due to sample composition.
+
+\subsection{Evaluation metric}
+
+The primary metric is the mean relative $\ell_2$ prediction error on the held-out test set, computed in physical (denormalized) coordinates:
+\[
+E(N,D) = \frac{1}{M}\sum_{i=1}^{M}
+\frac{\left\| \hat{\bm{x}}_T^{(i)} - \bm{x}_T^{(i)} \right\|_2}
+{\left\| \bm{x}_T^{(i)} \right\|_2 + \varepsilon},
+\]
+where $\varepsilon > 0$ is a small stability constant.
+
+\subsection{Scaling-law ansatz}
+
+We fit empirical relationships of the form
+\begin{equation}
+E(N,D) \approx E_\infty + aN^{-\alpha} + bD^{-\beta},
+\label{eq:scaling}
+\end{equation}
+where $E_\infty$ is an asymptotic error floor, $\alpha$ is the capacity-scaling exponent, $\beta$ is the data-scaling exponent, and $a,b > 0$ are fitted coefficients.
+The purpose is descriptive and comparative, not predictive.
+
+\subsection{Statistical protocol}
+
+Each $(N, D)$ configuration is run across 3 data seeds $\times$ 3 training seeds $= 9$ replicates.
+We report mean and standard error across replicates.
+Scaling-law parameters are estimated with 1{,}000 bootstrap samples to produce 95\% confidence intervals.
+
+\subsection{Training details}
+
+All models use Adam with learning rate $10^{-3}$, weight decay $10^{-6}$, batch size $\min(128, D)$, and train for up to 400 epochs with early stopping (patience 40 on validation relative $\ell_2$).
+Zero runs diverged or produced NaN across the entire experimental grid.
+
+%% ================================================================
+%%  RESEARCH QUESTIONS
+%% ================================================================
+\section{Research Questions}
+
+\begin{enumerate}[leftmargin=*, itemsep=0.3em]
+    \item Does the physics prior improve prediction error, especially in the low-data regime?
+    \item Does the prior change the data-scaling exponent $\beta$?
+    \item Does the prior change the capacity-scaling exponent $\alpha$?
+    \item Does the prior affect training stability or the optimization trajectory?
+    \item Can the scaling-law framework distinguish a well-matched prior from a mismatched one?
+\end{enumerate}
+
+%% ================================================================
+%%  RESULTS
+%% ================================================================
+\section{Results}
+
+\subsection{Plain MLP baseline: scaling behavior}
+\label{sec:results-plain}
+
+The plain MLP exhibits clean power-law scaling across both axes.
+Representative test errors (mean $\pm$ stderr over 9 replicates):
+
+\begin{center}
+\small
+\begin{tabular}{lrrrr}
+\toprule
+& $D = 64$ & $D = 512$ & $D = 2048$ & $D = 8192$ \\
+\midrule
+Tiny ($N\!=\!1218$)    & $0.0164 \pm 0.0006$ & $0.0055 \pm 0.0002$ & $0.0026 \pm 0.0001$ & $0.0017 \pm 0.0001$ \\
+Small ($N\!=\!4482$)   & $0.0103 \pm 0.0005$ & $0.0030 \pm 0.0001$ & $0.0015 \pm 0.0001$ & $0.0010 \pm 0.0000$ \\
+Medium ($N\!=\!17154$) & $0.0070 \pm 0.0007$ & $0.0016 \pm 0.0001$ & $0.0010 \pm 0.0000$ & $0.0008 \pm 0.0001$ \\
+Large ($N\!=\!67074$)  & $0.0049 \pm 0.0005$ & $0.0011 \pm 0.0000$ & $0.0009 \pm 0.0000$ & $0.0008 \pm 0.0000$ \\
+XLarge ($N\!=\!132866$)& $0.0045 \pm 0.0004$ & $0.0012 \pm 0.0000$ & $0.0009 \pm 0.0000$ & $0.0007 \pm 0.0000$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The combined scaling fit yields:
+\[
+\hat{E}_\infty \approx 0,\quad \hat{\alpha} \approx 0.91,\quad \hat{\beta} \approx 0.85.
+\]
+These exponents are stable across bootstrap resamples.
+The near-zero error floor indicates that adding more data and capacity continues to yield improvement across the tested range.
+
+\begin{figure}[H]
+    \centering
+    \fbox{\parbox[c][2.4in][c]{0.85\textwidth}{\centering \status{Generate plots from runs-progress data: test error vs.\ $D$ for each capacity, log--log axes, plain model only.}}}
+    \caption{Data scaling for the plain MLP baseline.
+    Test error decreases as a power law with exponent $\hat{\beta} \approx 0.85$.}
+    \label{fig:plain-data-scaling}
+\end{figure}
+
+\subsection{ODE-residual prior: biased scaling}
+\label{sec:results-midpoint}
+
+The midpoint-residual PIML model (with $\lambda_{\mathrm{phys}} = 0.1$) shows qualitatively different scaling behavior.
+Test errors plateau at approximately $E \approx 0.014$--$0.016$ across all $(N,D)$ configurations, with weak dependence on either axis:
+
+\begin{center}
+\small
+\begin{tabular}{lrrrr}
+\toprule
+& $D = 64$ & $D = 512$ & $D = 2048$ & $D = 8192$ \\
+\midrule
+Tiny    & $0.0244 \pm 0.0006$ & $0.0176 \pm 0.0002$ & $0.0162 \pm 0.0002$ & $0.0155 \pm 0.0002$ \\
+Small   & $0.0222 \pm 0.0006$ & $0.0170 \pm 0.0002$ & $0.0162 \pm 0.0001$ & $0.0155 \pm 0.0002$ \\
+Medium  & $0.0202 \pm 0.0008$ & $0.0163 \pm 0.0001$ & $0.0157 \pm 0.0003$ & $0.0148 \pm 0.0003$ \\
+Large   & $0.0198 \pm 0.0007$ & $0.0159 \pm 0.0001$ & $0.0150 \pm 0.0005$ & $0.0143 \pm 0.0002$ \\
+XLarge  & $0.0192 \pm 0.0007$ & $0.0154 \pm 0.0002$ & $0.0139 \pm 0.0004$ & $0.0141 \pm 0.0002$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The combined scaling fit yields:
+\[
+\hat{E}_\infty \approx 0.011,\quad \hat{\alpha} \approx 0.16,\quad \hat{\beta} \approx 0.53.
+\]
+The high error floor (20$\times$ the plain model's best error) and shallow exponents indicate that the prior dominates the optimization, preventing the model from exploiting additional data or capacity.
+
+\begin{figure}[H]
+    \centering
+    \fbox{\parbox[c][2.4in][c]{0.85\textwidth}{\centering \status{Generate comparative plot: plain vs.\ midpoint PIML, test error vs.\ $D$, at fixed large capacity.}}}
+    \caption{Comparative data scaling for the plain and midpoint-residual models at large capacity.
+    The PIML model saturates at the physics-loss floor.}
+    \label{fig:midpoint-vs-plain}
+\end{figure}
+
+\paragraph{Interpretation.}
+The midpoint-rule residual is a first-order quadrature approximation.
+At the tested horizon $T = 1.0$, even ground-truth flow-map targets incur a mean relative residual of approximately 15\% under this approximation.
+The physics loss therefore has an irreducible floor of $\mathcal{L}_{\mathrm{mid}}^* \approx 0.15$, which is $\sim\!50{,}000\times$ larger than the achievable data loss ($\sim\!3 \times 10^{-6}$).
+As training progresses and data loss decreases, the physics gradient dominates, and the optimizer converges to a plateau determined by the biased prior rather than the data.
+
+\subsection{Conservation-law prior: exact scaling}
+\label{sec:results-conservation}
+
+\pending{Run conservation-law lambda sweep and full scaling sweep.}
+
+\pending{Fill in representative error table, same format as above.}
+
+\pending{Fill in combined scaling fit: $\hat{E}_\infty$, $\hat{\alpha}$, $\hat{\beta}$.}
+
+\paragraph{Expected contrast.}
+Because the conservation-law prior has zero irreducible error on ground-truth targets (verified: $\mathcal{L}_{\mathrm{cons}}^* \approx 10^{-14}$ on the test set), we expect qualitatively different behavior from the midpoint prior.
+The key questions are whether the prior:
+\begin{itemize}[leftmargin=*]
+    \item lowers the error floor relative to the plain model,
+    \item steepens the data-scaling exponent (improved data efficiency),
+    \item changes capacity scaling, or
+    \item primarily helps in the low-data regime.
+\end{itemize}
+
+\subsection{Comparative scaling-law fits}
+
+\begin{table}[H]
+    \centering
+    \caption{Fitted scaling parameters across the three models.
+    The combined fit uses all $(N,D)$ configurations.}
+    \label{tab:scaling-params}
+    \begin{tabular}{lcccc}
+        \toprule
+        Model & $\hat{E}_\infty$ & $\hat{\alpha}$ & $\hat{\beta}$ & Notes \\
+        \midrule
+        Plain MLP           & $\approx 0$  & 0.91 & 0.85 & Clean power-law scaling \\
+        PIML (midpoint)     & $\approx 0.011$ & 0.16 & 0.53 & Dominated by biased prior \\
+        PIML (conservation) & \pending{--} & \pending{--} & \pending{--} & \pending{conservation sweep} \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\subsection{Training stability}
+
+All 720 runs (360 plain + 360 midpoint PIML) completed without divergence or NaN across the full $(N, D)$ grid.
+The midpoint PIML model early-stops substantially earlier: best-epoch values are typically 50--100 versus 300--500 for the plain model, consistent with the optimizer saturating at the physics-loss plateau.
+
+\pending{Add conservation-law stability data.}
+
+\begin{figure}[H]
+    \centering
+    \fbox{\parbox[c][2.4in][c]{0.85\textwidth}{\centering \status{Generate heatmap of best-epoch across $(N,D)$ for each model.}}}
+    \caption{Training duration (best epoch) across the $(N,D)$ grid.
+    The midpoint PIML model early-stops much sooner due to the physics-loss plateau.}
+    \label{fig:stability}
+\end{figure}
+
+\subsection{Sensitivity to regularization strength}
+\label{sec:results-lambda}
+
+We performed a dedicated $\lambda_{\mathrm{phys}}$ sweep for the midpoint-residual prior across $\lambda \in \{0, 10^{-4}, 10^{-3}, 10^{-2}, 10^{-1}, 1\}$ at two capacities (small, large) and three dataset sizes (128, 1024, 4096), with 9 replicates per configuration (324 runs total).
+
+\begin{table}[H]
+    \centering
+    \caption{Midpoint-prior $\lambda_{\mathrm{phys}}$ sweep: test relative $\ell_2$ error (mean over 9 replicates).}
+    \label{tab:lambda-midpoint}
+    \small
+    \begin{tabular}{lcccccc}
+        \toprule
+        & \multicolumn{6}{c}{$\lambda_{\mathrm{phys}}$} \\
+        \cmidrule(lr){2-7}
+        Config & $0$ & $10^{-4}$ & $10^{-3}$ & $10^{-2}$ & $10^{-1}$ & $1$ \\
+        \midrule
+        Small, $D\!=\!128$  & 0.0067 & 0.0070 & 0.0068 & 0.0076 & 0.0194 & 0.0748 \\
+        Small, $D\!=\!1024$ & 0.0021 & 0.0021 & 0.0021 & 0.0028 & 0.0165 & 0.0711 \\
+        Small, $D\!=\!4096$ & 0.0013 & 0.0012 & 0.0012 & 0.0020 & 0.0158 & 0.0706 \\
+        \midrule
+        Large, $D\!=\!128$  & 0.0028 & 0.0027 & 0.0028 & 0.0035 & 0.0176 & 0.0598 \\
+        Large, $D\!=\!1024$ & 0.0009 & 0.0008 & 0.0009 & 0.0019 & 0.0157 & 0.0630 \\
+        Large, $D\!=\!4096$ & 0.0008 & 0.0008 & 0.0008 & 0.0015 & 0.0142 & 0.0687 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+Key observations:
+\begin{itemize}[leftmargin=*]
+    \item $\lambda \le 10^{-3}$: indistinguishable from the plain baseline.
+    \item $\lambda = 10^{-2}$: onset of degradation ($1.5$--$2.2\times$ worse).
+    \item $\lambda = 10^{-1}$: strong degradation ($8$--$20\times$); error collapses to $\approx 0.015$ regardless of $D$ or $N$.
+    \item $\lambda = 1$: severe degradation ($50$--$100\times$).
+    \item No value of $\lambda$ improves over the baseline at any configuration.
+\end{itemize}
+The $\lambda = 0$ path reproduces the plain model bit-for-bit, confirming correct implementation.
+The monotonic dose--response pattern rules out isolated hyperparameter failure and is consistent with a biased prior.
+
+\pending{Add conservation-law lambda sweep results in same format.}
+
+%% ================================================================
+%%  DISCUSSION
+%% ================================================================
+\section{Discussion}
+
+\subsection{Scaling signatures as prior diagnostics}
+
+The central finding so far is that the scaling-law framework provides qualitatively different signatures for the two priors tested:
+
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Biased prior (midpoint residual):} elevated error floor ($\hat{E}_\infty \approx 0.011$), shallow exponents ($\hat{\alpha} \approx 0.16$, $\hat{\beta} \approx 0.53$), early stopping at a physics-dominated plateau.
+    The scaling law detects a prior--task mismatch.
+    \item \textbf{Exact prior (conservation law):} \pending{fill in after conservation sweep}.
+\end{itemize}
+
+This demonstrates that scaling laws are not merely a summarization tool---they can serve as a diagnostic for whether a physics prior is well-matched to the learning task.
+A biased prior does not simply fail to help; it actively distorts the scaling surface in a characteristic and interpretable way.
+
+\subsection{Why the midpoint prior fails}
+
+The midpoint-rule residual approximates $\int_0^T F(\bm{x}(t))\,dt$ with a single evaluation at the midpoint $(\bm{x}_0 + \bm{x}_T)/2$.
+At $T = 1.0$, the Lotka--Volterra trajectory curvature makes this approximation poor: ground-truth targets incur $\sim\!15\%$ relative residual.
+As the data loss decreases during training, the physics gradient grows relative to the data gradient:
+\[
+\frac{\lambda \cdot \nabla \mathcal{L}_{\mathrm{mid}}}{\nabla \mathcal{L}_{\mathrm{data}}} \sim \frac{\lambda \cdot O(1)}{O(\mathcal{L}_{\mathrm{data}})},
+\]
+eventually dominating the optimization.
+This mechanism explains both the observed error plateau and the premature early stopping.
+
+\subsection{Relationship to the broader research program}
+
+This paper is the first pilot in a broader research program to evaluate physics-informed priors via empirical scaling laws (see \cite{bahri2024,lu2021elliptic} for related directions).
+The present work contributes the experimental methodology and a first calibration result on a minimal dynamical system.
+Future work will extend to:
+\begin{itemize}[leftmargin=*]
+    \item multiple ODE regimes and PDE flow-map tasks,
+    \item different forms of physical priors (PINN-style collocation, architectural constraints, operator-learning),
+    \item regime-aware analyses of where scaling laws hold or fail.
+\end{itemize}
+
+\subsection{Why Lotka--Volterra?}
+
+Lotka--Volterra provides a minimal nonlinear dynamical system that is simple enough for exhaustive sweeps yet nontrivial enough to make inductive bias relevant.
+It possesses an exact first integral, enabling a controlled comparison between an exact and an approximate prior on the same task.
+Conclusions should not be overgeneralized to PDE learning, chaotic systems, or more complex physics-informed architectures.
+
+%% ================================================================
+%%  LIMITATIONS
+%% ================================================================
+\section{Limitations}
+
+\begin{enumerate}[leftmargin=*, itemsep=0.3em]
+    \item The study uses a single dynamical system (Lotka--Volterra).
+    \item It compares a plain MLP against two soft-constraint regularizers; architectural physics priors are not tested.
+    \item It focuses on fixed-horizon prediction ($T = 1.0$) rather than long autoregressive rollout.
+    \item It uses noise-free synthetic data.
+    \item The scaling-law ansatz \cref{eq:scaling} is a descriptive approximation, not a theoretical prediction.
+    \item \pending{If conservation results are null: note that the exact prior (conservation law) constrains only one scalar quantity, leaving the model underconstrained along the conserved manifold.}
+\end{enumerate}
+
+%% ================================================================
+%%  CONCLUSION
+%% ================================================================
+\section{Conclusion}
+
+We introduced a controlled study for evaluating whether simple physics priors change empirical scaling behavior in scientific machine learning.
+Using fixed-horizon Lotka--Volterra flow-map prediction, we compared a plain MLP against an ODE-residual prior and a conservation-law prior across model capacity and dataset size.
+The scaling-law framework reveals qualitatively different signatures: the biased midpoint prior raises the error floor and flattens scaling exponents, while the exact conservation prior \pending{state outcome}.
+
+The main contribution is methodological.
+Scaling laws serve not only as a compact summary of learning behavior, but as a diagnostic tool that distinguishes well-matched priors from mismatched ones.
+This perspective---treating scaling behavior itself as the object of study---supports a more principled and reproducible basis for evaluating physical inductive biases in scientific machine learning.
+
+\section*{Acknowledgments}
+
+Acknowledgments placeholder.
+
+%% ================================================================
+%%  APPENDICES
+%% ================================================================
+\appendix
+
+\section{Physics-Loss Weight Diagnostic}
+\label{app:lambda-diagnostic}
+
+\subsection{Motivation}
+
+A natural concern in any negative result involving a regularized objective is whether the outcome is caused by an implementation bug, an ill-chosen $\lambda_{\mathrm{phys}}$, or a genuine prior--task mismatch.
+This appendix documents a systematic diagnostic that distinguishes these cases.
+
+\subsection{Implementation equivalence control}
+
+With $\lambda_{\mathrm{phys}} = 0$, the PIML code path reproduces the plain model bit-for-bit at all tested configurations (\cref{tab:lambda-midpoint}).
+This rules out hidden code-path discrepancies.
+
+\subsection{Ground-truth residual}
+
+Evaluating the midpoint residual on exact ground-truth targets:
+\[
+\text{Mean } \|r\|_2 = 0.363, \qquad
+\text{Mean relative residual} \approx 15\%, \qquad
+\mathcal{L}_{\mathrm{mid}}^* \approx 0.151.
+\]
+The conservation-law residual on the same targets: $\mathcal{L}_{\mathrm{cons}}^* \approx 10^{-14}$.
+
+\subsection{Interpretation}
+
+The midpoint physics loss has an irreducible floor $\sim\!50{,}000\times$ larger than the achievable data loss.
+No value of $\lambda$ can fix this: small $\lambda$ makes the prior invisible; large $\lambda$ drives the optimizer toward the biased proxy.
+This creates a characteristic dose--response degradation pattern (\cref{tab:lambda-midpoint}) that is a hallmark of prior--task mismatch.
+
+\pending{Add equivalent lambda-sweep data for conservation prior.}
+
+\section{Conservation-Law Prior: Details}
+\label{app:conservation-details}
+
+The Lotka--Volterra first integral is
+\[
+H(u,v) = \delta u - \gamma \ln u + \beta v - \alpha \ln v.
+\]
+The conservation loss penalizes $(\Delta H)^2 = (H(\hat{\bm{x}}_T) - H(\bm{x}_0))^2$.
+On ground-truth data, $|\Delta H| / |H| \approx 10^{-7}$, confirming the prior is exact to within numerical integration tolerances.
+
+\pending{Add architecture details, hyperparameter tables, and any additional ablation results from the conservation sweep.}
+
+%% ================================================================
+%%  BIBLIOGRAPHY
+%% ================================================================
+\bibliographystyle{plain}
+\begin{thebibliography}{99}
+
+\bibitem{bahri2024}
+Y.~Bahri, E.~Dyer, J.~Kaplan, J.~Lee, and U.~Sharma.
+\newblock Explaining neural scaling laws.
+\newblock \emph{Proceedings of the National Academy of Sciences}, 121(30), 2024.
+
+\bibitem{chen2018node}
+R.~T.~Q. Chen, Y.~Rubanova, J.~Bettencourt, and D.~Duvenaud.
+\newblock Neural ordinary differential equations.
+\newblock In \emph{Advances in Neural Information Processing Systems}, 2018.
+
+\bibitem{cuomo2022}
+S.~Cuomo, V.~S. Di~Cola, F.~Giampaolo, G.~Rozza, et al.
+\newblock Scientific machine learning through physics-informed neural networks:
+  Where we are and what's next.
+\newblock \emph{Journal of Scientific Computing}, 92, 2022.
+
+\bibitem{hestness2017}
+J.~Hestness, S.~Narang, N.~Ardalani, et al.
+\newblock Deep learning scaling is predictable, empirically.
+\newblock arXiv:1712.00409, 2017.
+
+\bibitem{kaplan2020}
+J.~Kaplan, S.~McCandlish, T.~Henighan, et al.
+\newblock Scaling laws for neural language models.
+\newblock arXiv:2001.08361, 2020.
+
+\bibitem{karpatne2022}
+A.~Karpatne, R.~Kannan, and V.~Kumar.
+\newblock \emph{Knowledge Guided Machine Learning: Accelerating Discovery Using Scientific Knowledge and Data}.
+\newblock Chapman \& Hall/CRC, 2022.
+
+\bibitem{li2020fno}
+Z.~Li, N.~Kovachki, K.~Azizzadenesheli, et al.
+\newblock Fourier neural operator for parametric partial differential equations.
+\newblock arXiv:2010.08895, 2020.
+
+\bibitem{lu2019deeponet}
+L.~Lu, P.~Jin, and G.~E. Karniadakis.
+\newblock {DeepONet}: Learning nonlinear operators for identifying differential equations based on the universal approximation theorem of operators.
+\newblock arXiv:1910.03193, 2019.
+
+\bibitem{lu2021elliptic}
+Y.~Lu, H.~Chen, J.~Lu, L.~Ying, and J.~Blanchet.
+\newblock Machine learning for elliptic {PDE}s: Fast rate generalization bound, neural scaling law and minimax optimality.
+\newblock arXiv:2110.06897, 2021.
+
+\bibitem{pang2019fpinns}
+G.~Pang, L.~Lu, and G.~E. Karniadakis.
+\newblock f{PINNs}: Fractional physics-informed neural networks.
+\newblock \emph{SIAM Journal on Scientific Computing}, 41(4), 2019.
+
+\bibitem{raissi2019pinn}
+M.~Raissi, P.~Perdikaris, and G.~E. Karniadakis.
+\newblock Physics-informed neural networks: A deep learning framework for solving forward and inverse problems involving nonlinear partial differential equations.
+\newblock \emph{Journal of Computational Physics}, 378:686--707, 2019.
+
+\bibitem{rosenfeld2019}
+J.~S. Rosenfeld, A.~Rosenfeld, Y.~Belinkov, and N.~Shavit.
+\newblock A constructive prediction of the generalization error across scales.
+\newblock arXiv:1909.12673, 2019.
+
+\bibitem{wang2022ntk}
+S.~Wang, X.~Yu, and P.~Perdikaris.
+\newblock When and why {PINNs} fail to train: A neural tangent kernel perspective.
+\newblock \emph{Journal of Computational Physics}, 449, 2022.
+
+\bibitem{willard2022}
+J.~Willard, X.~Jia, S.~Xu, M.~Steinbach, and V.~Kumar.
+\newblock Integrating scientific knowledge with machine learning for engineering and environmental systems.
+\newblock \emph{ACM Computing Surveys}, 54(4), 2022.
+
+\end{thebibliography}
+
+\end{document}

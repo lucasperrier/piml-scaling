@@ -16,7 +16,7 @@ def main() -> None:
     p.add_argument("--D", type=int, required=True)
     p.add_argument("--train-seed", type=int, required=True)
 
-    p.add_argument("--model", type=str, choices=["plain", "piml"], default="plain")
+    p.add_argument("--model", type=str, choices=["plain", "piml", "piml-conservation"], default="plain")
     p.add_argument(
         "--capacity",
         type=str,
@@ -38,7 +38,8 @@ def main() -> None:
 
         cfg.model.hidden_widths = CAPACITY_GRID[args.capacity]
 
-    is_piml = args.model == "piml"
+    _PRIOR_MAP = {"plain": "none", "piml": "midpoint", "piml-conservation": "conservation"}
+    physics_prior = _PRIOR_MAP[args.model]
     model_name = args.model
     capacity_name = args.capacity or "custom"
 
@@ -61,7 +62,7 @@ def main() -> None:
         run_dir=run_dir,
         model_name=model_name,
         capacity_name=capacity_name,
-        is_physics_informed=is_piml,
+        physics_prior=physics_prior,
         train_seed=args.train_seed,
         data_root=args.data_root,
         dataset_size=args.D,

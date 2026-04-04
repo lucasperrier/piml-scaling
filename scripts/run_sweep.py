@@ -47,6 +47,9 @@ def _run_dir(out_root: Path, model: str, capacity_name: str, dataset_size: int, 
     )
 
 
+_PRIOR_MAP = {"plain": "none", "piml": "midpoint", "piml-conservation": "conservation"}
+
+
 def _failure_metrics(*, model: str, capacity_name: str, hidden_widths: list[int], dataset_size: int, data_seed: int, train_seed: int, data_root: Path, run_dir: Path, reason: str) -> dict[str, object]:
     config_path = run_dir / "config.yaml"
     history_path = run_dir / "history.csv"
@@ -54,7 +57,8 @@ def _failure_metrics(*, model: str, capacity_name: str, hidden_widths: list[int]
     metrics_path = run_dir / "metrics.json"
     return {
         "model_name": model,
-        "is_physics_informed": model == "piml",
+        "is_physics_informed": model != "plain",
+        "physics_prior": _PRIOR_MAP.get(model, "none"),
         "capacity_name": capacity_name,
         "hidden_widths": hidden_widths,
         "parameter_count": -1,
@@ -89,7 +93,7 @@ def main() -> None:
     parser.add_argument("--config", type=str, default="configs/default.yaml")
     parser.add_argument("--data-dir", type=str, default="data", help="Directory containing data_seed=*/")
     parser.add_argument("--out", type=str, default=None)
-    parser.add_argument("--models", type=str, default=None, help="Comma-separated model names from {plain,piml}")
+    parser.add_argument("--models", type=str, default=None, help="Comma-separated model names from {plain,piml,piml-conservation}")
     parser.add_argument("--capacities", type=str, default=None, help="Comma-separated capacity names")
     parser.add_argument("--dataset-sizes", type=str, default=None, help="Comma-separated dataset sizes")
     parser.add_argument("--data-seeds", type=str, default=None, help="Comma-separated data seeds")
@@ -120,7 +124,7 @@ def main() -> None:
     run_index = 0
 
     for model in models:
-        if model not in {"plain", "piml"}:
+        if model not in {"plain", "piml", "piml-conservation"}:
             raise ValueError(f"Unknown model: {model}")
         for capacity_name in capacities:
             if capacity_name not in CAPACITY_GRID:
@@ -153,7 +157,7 @@ def main() -> None:
                                 run_dir=run_dir,
                                 model_name=model,
                                 capacity_name=capacity_name,
-                                is_physics_informed=model == "piml",
+                                physics_prior=_PRIOR_MAP[model],
                                 train_seed=train_seed,
                                 data_root=data_root,
                                 dataset_size=dataset_size,

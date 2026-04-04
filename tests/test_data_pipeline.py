@@ -146,7 +146,7 @@ def test_train_one_run_passes_physical_states_to_physics_loss(tmp_path, monkeypa
         run_dir=run_dir,
         model_name="piml_test",
         capacity_name="tiny",
-        is_physics_informed=True,
+        physics_prior="midpoint",
         train_seed=101,
         data_root=root,
         dataset_size=1,

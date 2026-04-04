@@ -7,6 +7,43 @@ def mse_loss(pred: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
     return torch.mean((pred - target) ** 2)
 
 
+# ---------------------------------------------------------------------------
+# Conservation-law prior: H(u,v) = δu − γ ln u + βv − α ln v
+# ---------------------------------------------------------------------------
+
+def _lv_invariant(
+    u: torch.Tensor,
+    *,
+    alpha: float,
+    beta: float,
+    delta: float,
+    gamma: float,
+) -> torch.Tensor:
+    """Evaluate the Lotka–Volterra first integral H(u,v).
+
+    u: (B, 2)  with columns [prey, predator].
+    Returns: (B,)
+    """
+    x = u[:, 0]
+    y = u[:, 1]
+    return delta * x - gamma * torch.log(x) + beta * y - alpha * torch.log(y)
+
+
+def conservation_loss(
+    *,
+    u0: torch.Tensor,
+    uT_hat: torch.Tensor,
+    alpha: float,
+    beta: float,
+    delta: float,
+    gamma: float,
+) -> torch.Tensor:
+    """Mean squared violation of the Lotka–Volterra conservation law."""
+    H0 = _lv_invariant(u0, alpha=alpha, beta=beta, delta=delta, gamma=gamma)
+    HT = _lv_invariant(uT_hat, alpha=alpha, beta=beta, delta=delta, gamma=gamma)
+    return torch.mean((HT - H0) ** 2)
+
+
 def physics_midpoint_residual(
     *,
     u0: torch.Tensor,
@@ -56,6 +93,35 @@ def total_loss(
         u0=u0,
         uT_hat=uT_hat_phys,
         T=T,
+        alpha=alpha,
+        beta=beta,
+        delta=delta,
+        gamma=gamma,
+    )
+    L = ld + float(lambda_phys) * lp
+    return L, {
+        "loss": float(L.detach().cpu()),
+        "data": float(ld.detach().cpu()),
+        "phys": float(lp.detach().cpu()),
+    }
+
+
+def total_loss_conservation(
+    *,
+    pred: torch.Tensor,
+    target: torch.Tensor,
+    u0: torch.Tensor,
+    uT_hat_phys: torch.Tensor,
+    alpha: float,
+    beta: float,
+    delta: float,
+    gamma: float,
+    lambda_phys: float,
+) -> tuple[torch.Tensor, dict[str, float]]:
+    ld = mse_loss(pred, target)
+    lp = conservation_loss(
+        u0=u0,
+        uT_hat=uT_hat_phys,
         alpha=alpha,
         beta=beta,
         delta=delta,

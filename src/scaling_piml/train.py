@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from .config import ExperimentConfig
-from .losses import mse_loss, total_loss
+from .losses import mse_loss, total_loss, total_loss_conservation
 from .metrics import mse, relative_l2
 from .models.mlp import MLP, parameter_count
 from .utils.io import ensure_dir, save_json, save_yaml
@@ -53,7 +53,7 @@ def train_one_run(
     run_dir: str | Path,
     model_name: str,
     capacity_name: str | None,
-    is_physics_informed: bool,
+    physics_prior: str,
     train_seed: int,
     data_root: str | Path,
     dataset_size: int,
@@ -126,7 +126,7 @@ def train_one_run(
                 opt.zero_grad(set_to_none=True)
                 pred = model(x)
 
-                if is_physics_informed:
+                if physics_prior == "midpoint":
                     x_phys, _, pred_phys = _physical_batch(train_loader, x, y, pred)
                     L, parts = total_loss(
                         pred=pred,
@@ -134,6 +134,22 @@ def train_one_run(
                         u0=x_phys,
                         uT_hat_phys=pred_phys,
                         T=cfg.data.T,
+                        alpha=cfg.system.alpha,
+                        beta=cfg.system.beta,
+                        delta=cfg.system.delta,
+                        gamma=cfg.system.gamma,
+                        lambda_phys=cfg.train.lambda_phys,
+                    )
+                    losses.append(parts["loss"])
+                    data_losses.append(parts["data"])
+                    phys_losses.append(parts["phys"])
+                elif physics_prior == "conservation":
+                    x_phys, _, pred_phys = _physical_batch(train_loader, x, y, pred)
+                    L, parts = total_loss_conservation(
+                        pred=pred,
+                        target=y,
+                        u0=x_phys,
+                        uT_hat_phys=pred_phys,
                         alpha=cfg.system.alpha,
                         beta=cfg.system.beta,
                         delta=cfg.system.delta,
@@ -236,7 +252,8 @@ def train_one_run(
 
     metrics_out = {
         "model_name": model_name,
-        "is_physics_informed": bool(is_physics_informed),
+        "is_physics_informed": physics_prior != "none",
+        "physics_prior": physics_prior,
         "capacity_name": str(capacity_name or "custom"),
         "hidden_widths": list(cfg.model.hidden_widths),
         "parameter_count": int(n_params),

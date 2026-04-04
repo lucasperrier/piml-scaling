@@ -1,11 +1,11 @@
-"""Run a lambda_phys sweep for PIML physics-loss diagnosis.
+"""Run a lambda_phys sweep for physics-loss diagnosis.
 
-Runs PIML model across a grid of lambda_phys values on a representative
-subset of capacities, dataset sizes, data seeds, and train seeds.
+Runs a physics-informed model across a grid of lambda_phys values on a
+representative subset of capacities, dataset sizes, data seeds, and train seeds.
 Also runs lambda_phys=0 to verify equivalence with the plain model.
 
 Output directory structure:
-  {out}/lambda={lambda_phys}/model=piml/capacity={cap}/D={D}/data_seed={ds}/train_seed={ts}/
+  {out}/lambda={lambda_phys}/model={model}/capacity={cap}/D={D}/data_seed={ds}/train_seed={ts}/
 """
 from __future__ import annotations
 
@@ -46,7 +46,16 @@ def main() -> None:
         help="Comma-separated train seeds",
     )
     parser.add_argument("--overwrite", action="store_true")
+    parser.add_argument(
+        "--model", type=str, default="piml",
+        choices=["piml", "piml-conservation"],
+        help="Which physics-informed model to sweep (default: piml)",
+    )
     args = parser.parse_args()
+
+    _PRIOR_MAP = {"piml": "midpoint", "piml-conservation": "conservation"}
+    model_name = args.model
+    prior_key = _PRIOR_MAP[model_name]
 
     cfg = load_experiment_config(args.config)
     data_dir = Path(args.data_dir)
@@ -75,7 +84,7 @@ def main() -> None:
                         run_dir = ensure_dir(
                             out_root
                             / f"lambda={lam}"
-                            / f"model=piml"
+                            / f"model={model_name}"
                             / f"capacity={cap}"
                             / f"D={D}"
                             / f"data_seed={dseed}"
@@ -98,9 +107,9 @@ def main() -> None:
                             metrics = train_one_run(
                                 cfg=run_cfg,
                                 run_dir=run_dir,
-                                model_name="piml",
+                                model_name=model_name,
                                 capacity_name=cap,
-                                is_physics_informed=(lam > 0),
+                                physics_prior=prior_key if lam > 0 else "none",
                                 train_seed=tseed,
                                 data_root=data_root,
                                 dataset_size=D,

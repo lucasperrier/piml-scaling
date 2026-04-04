@@ -11,6 +11,7 @@ import pandas as pd
 REQUIRED_COLUMNS = [
     "model_name",
     "is_physics_informed",
+    "physics_prior",
     "capacity_name",
     "hidden_widths",
     "parameter_count",
@@ -94,6 +95,7 @@ def _group_records(df: pd.DataFrame) -> pd.DataFrame:
     group_keys = [
         "model_name",
         "is_physics_informed",
+        "physics_prior",
         "capacity_name",
         "hidden_widths",
         "parameter_count",
