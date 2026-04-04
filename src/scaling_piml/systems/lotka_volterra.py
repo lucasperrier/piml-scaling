@@ -3,7 +3,15 @@ from __future__ import annotations
 import numpy as np
 
 
-def lotka_volterra_rhs(t: float, u: np.ndarray, *, alpha: float, beta: float, delta: float, gamma: float) -> np.ndarray:
+def lotka_volterra_rhs(
+    t: float,
+    u: np.ndarray,
+    *,
+    alpha: float,
+    beta: float,
+    delta: float,
+    gamma: float,
+) -> np.ndarray:
     """Lotka–Volterra vector field.
 
     Args:

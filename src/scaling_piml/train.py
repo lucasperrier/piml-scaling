@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import math
 import time
 from dataclasses import asdict
 from pathlib import Path
@@ -21,6 +22,16 @@ def _device() -> torch.device:
     return torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
+def _physical_batch(loader: DataLoader, x: torch.Tensor, y: torch.Tensor, yhat: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    dataset = loader.dataset
+    if hasattr(dataset, "denormalize_inputs") and hasattr(dataset, "denormalize_targets"):
+        x_phys = dataset.denormalize_inputs(x)
+        y_phys = dataset.denormalize_targets(y)
+        yhat_phys = dataset.denormalize_targets(yhat)
+        return x_phys, y_phys, yhat_phys
+    return x, y, yhat
+
+
 @torch.no_grad()
 def evaluate(model: torch.nn.Module, loader: DataLoader, device: torch.device) -> dict[str, float]:
     model.eval()
@@ -30,8 +41,9 @@ def evaluate(model: torch.nn.Module, loader: DataLoader, device: torch.device) -
         x = x.to(device)
         y = y.to(device)
         yhat = model(x)
-        rels.append(relative_l2(yhat, y).detach().cpu())
-        mses.append(mse(yhat, y).detach().cpu())
+        _, y_phys, yhat_phys = _physical_batch(loader, x, y, yhat)
+        rels.append(relative_l2(yhat_phys, y_phys).detach().cpu())
+        mses.append(mse(yhat_phys, y_phys).detach().cpu())
     return {"rel_l2": float(torch.stack(rels).mean()), "mse": float(torch.stack(mses).mean())}
 
 
@@ -40,6 +52,7 @@ def train_one_run(
     cfg: ExperimentConfig,
     run_dir: str | Path,
     model_name: str,
+    capacity_name: str | None,
     is_physics_informed: bool,
     train_seed: int,
     data_root: str | Path,
@@ -51,11 +64,21 @@ def train_one_run(
     seed_everything(train_seed)
 
     run_dir = ensure_dir(run_dir)
-    save_yaml(run_dir / "config.yaml", asdict(cfg))
+    config_path = run_dir / "config.yaml"
+    history_path = run_dir / "history.csv"
+    checkpoint_path = run_dir / "best.pt"
+    metrics_path = run_dir / "metrics.json"
+
+    save_yaml(config_path, asdict(cfg))
 
     device = _device()
 
-    model = MLP(2, 2, hidden_widths=cfg.model.hidden_widths, activation=cfg.model.activation).to(device)
+    model = MLP(
+        2,
+        2,
+        hidden_widths=cfg.model.hidden_widths,
+        activation=cfg.model.activation,
+    ).to(device)
     n_params = parameter_count(model)
 
     batch_size = min(cfg.train.batch_size_cap, dataset_size)
@@ -70,7 +93,6 @@ def train_one_run(
     best_epoch = -1
     bad_epochs = 0
 
-    history_path = run_dir / "history.csv"
     with history_path.open("w", newline="") as f:
         writer = csv.DictWriter(
             f,
@@ -102,10 +124,12 @@ def train_one_run(
                 pred = model(x)
 
                 if is_physics_informed:
+                    x_phys, _, pred_phys = _physical_batch(train_loader, x, y, pred)
                     L, parts = total_loss(
                         pred=pred,
                         target=y,
-                        u0=x,
+                        u0=x_phys,
+                        uT_hat_phys=pred_phys,
                         T=cfg.data.T,
                         alpha=cfg.system.alpha,
                         beta=cfg.system.beta,
@@ -152,7 +176,7 @@ def train_one_run(
                 best_val = val_metrics["rel_l2"]
                 best_epoch = epoch
                 bad_epochs = 0
-                torch.save({"state_dict": model.state_dict()}, run_dir / "best.pt")
+                torch.save({"state_dict": model.state_dict()}, checkpoint_path)
             else:
                 bad_epochs += 1
 
@@ -162,22 +186,15 @@ def train_one_run(
         runtime = time.time() - start
 
     # Load best checkpoint for final metrics
-    if (run_dir / "best.pt").exists():
-        ckpt = torch.load(run_dir / "best.pt", map_location=device)
+    if checkpoint_path.exists():
+        ckpt = torch.load(checkpoint_path, map_location=device)
         model.load_state_dict(ckpt["state_dict"])
 
     train_metrics = evaluate(model, train_loader, device)
     val_metrics = evaluate(model, val_loader, device)
     test_metrics = evaluate(model, test_loader, device)
 
-    metrics_out = {
-        "model_name": model_name,
-        "is_physics_informed": bool(is_physics_informed),
-        "parameter_count": int(n_params),
-        "dataset_size": int(dataset_size),
-        "data_seed": int(str(Path(data_root).name).split("=")[-1]),
-        "train_seed": int(train_seed),
-        "best_epoch": int(best_epoch),
+    scalar_metrics = {
         "train_rel_l2": float(train_metrics["rel_l2"]),
         "val_rel_l2": float(val_metrics["rel_l2"]),
         "test_rel_l2": float(test_metrics["rel_l2"]),
@@ -185,9 +202,48 @@ def train_one_run(
         "val_mse": float(val_metrics["mse"]),
         "test_mse": float(test_metrics["mse"]),
         "runtime_seconds": float(runtime),
-        "diverged": bool(diverged),
-        "nan_detected": bool(nan_detected),
     }
 
-    save_json(run_dir / "metrics.json", metrics_out)
+    if nan_detected:
+        status = "nan"
+        failure_reason = "NaN or Inf detected during training"
+    elif diverged:
+        status = "diverged"
+        failure_reason = "Training diverged before completing an epoch"
+    elif best_epoch < 0:
+        status = "failed"
+        failure_reason = "No valid checkpoint was produced"
+    elif not all(math.isfinite(value) for value in scalar_metrics.values()):
+        status = "nan"
+        failure_reason = "Non-finite evaluation metrics"
+    else:
+        status = "success"
+        failure_reason = ""
+
+    metrics_out = {
+        "model_name": model_name,
+        "is_physics_informed": bool(is_physics_informed),
+        "capacity_name": str(capacity_name or "custom"),
+        "hidden_widths": list(cfg.model.hidden_widths),
+        "parameter_count": int(n_params),
+        "dataset_size": int(dataset_size),
+        "data_seed": int(str(Path(data_root).name).split("=")[-1]),
+        "train_seed": int(train_seed),
+        "status": status,
+        "failure_reason": failure_reason,
+        "best_epoch": int(best_epoch),
+        **scalar_metrics,
+        "diverged": bool(diverged),
+        "nan_detected": bool(nan_detected),
+        "eligible_for_fit": bool(status == "success"),
+        "data_root": str(Path(data_root).resolve()),
+        "run_dir": str(run_dir.resolve()),
+        "config_path": str(config_path.resolve()),
+        "history_path": str(history_path.resolve()),
+        "checkpoint_path": str(checkpoint_path.resolve()) if checkpoint_path.exists() else "",
+        "metrics_path": str(metrics_path.resolve()),
+        "device": str(device),
+    }
+
+    save_json(metrics_path, metrics_out)
     return metrics_out

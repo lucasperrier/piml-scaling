@@ -1,0 +1,37 @@
+system:
+  alpha: 1.5
+  beta: 1.0
+  delta: 1.0
+  gamma: 3.0
+
+solver:
+  method: DOP853
+  rtol: 1.0e-9
+  atol: 1.0e-11
+
+data:
+  T: 1.0
+  x0_low: 0.5
+  x0_high: 2.5
+  y0_low: 0.5
+  y0_high: 2.5
+  train_pool: 128
+  val_size: 32
+  test_size: 32
+  dataset_sizes: [64]
+  data_seeds: [11]
+
+model:
+  activation: relu
+  hidden_widths: [32, 32]
+
+train:
+  lr: 1.0e-3
+  weight_decay: 1.0e-6
+  batch_size_cap: 64
+  max_epochs: 5
+  early_stopping_patience: 2
+  lambda_phys: 0.1
+  train_seeds: [101]
+
+out_dir: runs-smoke

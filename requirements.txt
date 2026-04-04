@@ -1,0 +1,11 @@
+# Core runtime dependencies
+numpy>=1.24
+scipy>=1.10
+pyyaml>=6.0
+tqdm>=4.66
+pandas>=2.0
+
+# ML framework
+# If you want CPU-only wheels, consider:
+#   pip install torch --index-url https://download.pytorch.org/whl/cpu
+torch>=2.1

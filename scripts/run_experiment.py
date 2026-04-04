@@ -17,7 +17,12 @@ def main() -> None:
     p.add_argument("--train-seed", type=int, required=True)
 
     p.add_argument("--model", type=str, choices=["plain", "piml"], default="plain")
-    p.add_argument("--capacity", type=str, default=None, help="Optional capacity name (e.g. small) to override hidden widths")
+    p.add_argument(
+        "--capacity",
+        type=str,
+        default=None,
+        help="Optional capacity name (e.g. small) to override hidden widths",
+    )
     p.add_argument("--out", type=str, default=None)
 
     args = p.parse_args()
@@ -30,7 +35,8 @@ def main() -> None:
         cfg.model.hidden_widths = CAPACITY_GRID[args.capacity]
 
     is_piml = args.model == "piml"
-    model_name = f"{args.model}" + (f"_{args.capacity}" if args.capacity else "")
+    model_name = args.model
+    capacity_name = args.capacity or "custom"
 
     train_ds = FlowMapDataset(args.data_root, "train", D=args.D, normalize=True)
     val_ds = FlowMapDataset(args.data_root, "val", normalize=True)
@@ -40,7 +46,7 @@ def main() -> None:
     run_dir = ensure_dir(
         out_root
         / f"model={args.model}"
-        / f"capacity={','.join(map(str, cfg.model.hidden_widths))}"
+        / f"capacity={capacity_name if args.capacity else ','.join(map(str, cfg.model.hidden_widths))}"
         / f"D={args.D}"
         / f"data_seed={Path(args.data_root).name.split('=')[-1]}"
         / f"train_seed={args.train_seed}"
@@ -50,6 +56,7 @@ def main() -> None:
         cfg=cfg,
         run_dir=run_dir,
         model_name=model_name,
+        capacity_name=capacity_name,
         is_physics_informed=is_piml,
         train_seed=args.train_seed,
         data_root=args.data_root,

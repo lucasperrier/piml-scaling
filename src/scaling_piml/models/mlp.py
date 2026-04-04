@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-
 import torch
 import torch.nn as nn
 
@@ -16,7 +14,13 @@ def _activation(name: str) -> nn.Module:
 
 
 class MLP(nn.Module):
-    def __init__(self, in_dim: int, out_dim: int, hidden_widths: list[int], activation: str = "relu"):
+    def __init__(
+        self,
+        in_dim: int,
+        out_dim: int,
+        hidden_widths: list[int],
+        activation: str = "relu",
+    ):
         super().__init__()
         act = _activation(activation)
 

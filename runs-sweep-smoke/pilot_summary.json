@@ -1,0 +1,90 @@
+{
+  "best_epoch_summary": {
+    "mean": 4.0,
+    "std": 0.0
+  },
+  "checks": {
+    "error_vs_D": [
+      {
+        "axis": "dataset_size",
+        "capacity_name": "tiny",
+        "max_relative_increase": null,
+        "metric_values": [
+          0.3371061980724334
+        ],
+        "model_name": "piml",
+        "n_points": 1,
+        "reversals": 0,
+        "status": "insufficient",
+        "x_values": [
+          64
+        ]
+      },
+      {
+        "axis": "dataset_size",
+        "capacity_name": "tiny",
+        "max_relative_increase": null,
+        "metric_values": [
+          0.3385539948940277
+        ],
+        "model_name": "plain",
+        "n_points": 1,
+        "reversals": 0,
+        "status": "insufficient",
+        "x_values": [
+          64
+        ]
+      }
+    ],
+    "error_vs_N": [
+      {
+        "axis": "parameter_count",
+        "dataset_size": 64,
+        "max_relative_increase": null,
+        "metric_values": [
+          0.3371061980724334
+        ],
+        "model_name": "piml",
+        "n_points": 1,
+        "reversals": 0,
+        "status": "insufficient",
+        "x_values": [
+          1218
+        ]
+      },
+      {
+        "axis": "parameter_count",
+        "dataset_size": 64,
+        "max_relative_increase": null,
+        "metric_values": [
+          0.3385539948940277
+        ],
+        "model_name": "plain",
+        "n_points": 1,
+        "reversals": 0,
+        "status": "insufficient",
+        "x_values": [
+          1218
+        ]
+      }
+    ]
+  },
+  "gate": {
+    "all_error_vs_D_checks_pass": true,
+    "all_error_vs_N_checks_pass": true,
+    "enough_data": false,
+    "ready_for_full_sweep": false,
+    "stability_ok": true
+  },
+  "max_divergence_rate": 0.3,
+  "metric": "test_rel_l2_mean",
+  "relative_tolerance": 0.05,
+  "run_summary": {
+    "divergence_rate": 0.0,
+    "nan_rate": 0.0,
+    "status_counts": {
+      "success": 2
+    },
+    "total_runs": 2
+  }
+}

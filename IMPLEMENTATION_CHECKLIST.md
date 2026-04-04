@@ -1,86 +1,86 @@
 
-`IMPLEMENTATION_CHECKLIST.md`
-```markdown
 # Implementation Checklist
 
+Status is synced to the current repository state as of 2026-04-04. Checked items are implemented or directly validated in the repo; unchecked items are still missing, not automated yet, or not fully verified.
+
 ## 1. Project setup
-- [ ] Create repository structure
-- [ ] Add `pyproject.toml` or `requirements.txt`
-- [ ] Add config system for data, model, train, and experiments
-- [ ] Add reproducible seeding utilities
-- [ ] Add logging / artifact saving utilities
+- [x] Create repository structure
+- [x] Add `pyproject.toml` or `requirements.txt`
+- [x] Add config system for data, model, train, and experiments
+- [x] Add reproducible seeding utilities
+- [x] Add logging / artifact saving utilities
 
 ## 2. Core system
-- [ ] Implement Lotka–Volterra RHS function
-- [ ] Implement ODE solve helper using `solve_ivp`
-- [ ] Expose system parameters through config
-- [ ] Add simple validation test for solver output
+- [x] Implement Lotka–Volterra RHS function
+- [x] Implement ODE solve helper using `solve_ivp`
+- [x] Expose system parameters through config
+- [x] Add simple validation test for solver output
 
 ## 3. Dataset generation
-- [ ] Implement initial condition sampler
-- [ ] Generate train / val / test splits for one data seed
-- [ ] Save frozen splits to disk
-- [ ] Implement nested train subsets for all `D`
-- [ ] Compute normalization stats from full train pool only
-- [ ] Save normalization stats to disk
+- [x] Implement initial condition sampler
+- [x] Generate train / val / test splits for one data seed
+- [x] Save frozen splits to disk
+- [x] Implement nested train subsets for all `D`
+- [x] Compute normalization stats from full train pool only
+- [x] Save normalization stats to disk
 - [ ] Repeat for data seeds `11`, `22`, `33`
 
 ## 4. Data loading
-- [ ] Implement dataset class for frozen splits
-- [ ] Implement subset loading by dataset size `D`
-- [ ] Apply saved normalization consistently
-- [ ] Verify no leakage from val/test into normalization
+- [x] Implement dataset class for frozen splits
+- [x] Implement subset loading by dataset size `D`
+- [x] Apply saved normalization consistently
+- [x] Verify no leakage from val/test into normalization
 
 ## 5. Models
-- [ ] Implement plain MLP
-- [ ] Implement configurable hidden layer sizes
-- [ ] Implement parameter count utility
-- [ ] Define default capacity grid
-- [ ] Verify forward output shape is correct
+- [x] Implement plain MLP
+- [x] Implement configurable hidden layer sizes
+- [x] Implement parameter count utility
+- [x] Define default capacity grid
+- [x] Verify forward output shape is correct
 
 ## 6. Losses
-- [ ] Implement data loss
-- [ ] Implement Lotka–Volterra physics residual
-- [ ] Implement total loss with `lambda_phys`
-- [ ] Verify physics-informed model uses same architecture as plain MLP
+- [x] Implement data loss
+- [x] Implement Lotka–Volterra physics residual
+- [x] Implement total loss with `lambda_phys`
+- [x] Verify physics-informed model uses same architecture as plain MLP
 
 ## 7. Training
-- [ ] Implement training loop
-- [ ] Implement validation loop
-- [ ] Implement early stopping
-- [ ] Log train / val metrics each epoch
-- [ ] Save best model checkpoint
-- [ ] Save training history CSV
-- [ ] Save final metrics JSON
+- [x] Implement training loop
+- [x] Implement validation loop
+- [x] Implement early stopping
+- [x] Log train / val metrics each epoch
+- [x] Save best model checkpoint
+- [x] Save training history CSV
+- [x] Save final metrics JSON
 
 ## 8. Evaluation
-- [ ] Implement relative L2 metric
-- [ ] Implement MSE metric
-- [ ] Evaluate on test set
+- [x] Implement relative L2 metric
+- [x] Implement MSE metric
+- [x] Evaluate on test set
 - [ ] Save test predictions optionally
-- [ ] Flag diverged / NaN runs
+- [x] Flag diverged / NaN runs
 
 ## 9. CLI / scripts
-- [ ] Script to generate datasets
-- [ ] Script to run one experiment
-- [ ] Script to run a sweep
-- [ ] Script to aggregate run results
+- [x] Script to generate datasets
+- [x] Script to run one experiment
+- [x] Script to run a sweep
+- [x] Script to aggregate run results
 - [ ] Script to fit scaling curves
 - [ ] Script to generate figures
 
 ## 10. Sanity checks
-- [ ] Single-run convergence test
+- [x] Single-run convergence test
 - [ ] Tiny-set overfit test with `D=32`
-- [ ] Pilot monotonicity check for error vs `D`
-- [ ] Pilot monotonicity check for error vs `N`
+- [x] Pilot monotonicity check for error vs `D`
+- [x] Pilot monotonicity check for error vs `N`
 - [ ] Check scale of physics loss vs data loss
 - [ ] Check exact reproducibility with same seed
 
 ## 11. Pilot sweep
-- [ ] Run 2 models × 2 capacities × 3 dataset sizes × 1 data seed × 2 train seeds
-- [ ] Inspect logs and saved metrics
-- [ ] Inspect capacity scaling trend
-- [ ] Inspect data scaling trend
+- [x] Run 2 models × 2 capacities × 3 dataset sizes × 1 data seed × 2 train seeds
+- [x] Inspect logs and saved metrics
+- [x] Inspect capacity scaling trend
+- [x] Inspect data scaling trend
 - [ ] Fix only genuine bugs before full sweep
 
 ## 12. Full experiment
@@ -113,8 +113,8 @@
 
 ## 16. Final validation
 - [ ] Confirm figures regenerate from scripts only
-- [ ] Confirm all configs are saved per run
-- [ ] Confirm no notebook-only results are required
+- [x] Confirm all configs are saved per run
+- [x] Confirm no notebook-only results are required
 - [ ] Confirm README matches actual implementation
 - [ ] Confirm minimal success criterion is met
 
@@ -122,5 +122,4 @@
 - [ ] Two clean scaling plots exist
 - [ ] Exponent estimates with uncertainty exist
 - [ ] Stability comparison exists
-- [ ] Clear conclusion can be stated:
-      physics prior affects data efficiency, capacity efficiency, error floor, and/or stability
+- [ ] Clear conclusion can be stated: physics prior affects data efficiency, capacity efficiency, error floor, and/or stability

@@ -43,6 +43,7 @@ def total_loss(
     pred: torch.Tensor,
     target: torch.Tensor,
     u0: torch.Tensor,
+    uT_hat_phys: torch.Tensor,
     T: float,
     alpha: float,
     beta: float,
@@ -53,7 +54,7 @@ def total_loss(
     ld = mse_loss(pred, target)
     lp = physics_loss(
         u0=u0,
-        uT_hat=pred,
+        uT_hat=uT_hat_phys,
         T=T,
         alpha=alpha,
         beta=beta,
@@ -61,4 +62,8 @@ def total_loss(
         gamma=gamma,
     )
     L = ld + float(lambda_phys) * lp
-    return L, {"loss": float(L.detach().cpu()), "data": float(ld.detach().cpu()), "phys": float(lp.detach().cpu())}
+    return L, {
+        "loss": float(L.detach().cpu()),
+        "data": float(ld.detach().cpu()),
+        "phys": float(lp.detach().cpu()),
+    }

@@ -1,0 +1,33 @@
+{
+  "best_epoch": 43,
+  "capacity_name": "small",
+  "checkpoint_path": "/home/lucas-perrier/Documents/projects/scaling-piml/runs-pilot/model=piml/capacity=small/D=64/data_seed=11/train_seed=101/best.pt",
+  "config_path": "/home/lucas-perrier/Documents/projects/scaling-piml/runs-pilot/model=piml/capacity=small/D=64/data_seed=11/train_seed=101/config.yaml",
+  "data_root": "/home/lucas-perrier/Documents/projects/scaling-piml/data-pilot/data_seed=11",
+  "data_seed": 11,
+  "dataset_size": 64,
+  "device": "cpu",
+  "diverged": false,
+  "eligible_for_fit": true,
+  "failure_reason": "",
+  "hidden_widths": [
+    64,
+    64
+  ],
+  "history_path": "/home/lucas-perrier/Documents/projects/scaling-piml/runs-pilot/model=piml/capacity=small/D=64/data_seed=11/train_seed=101/history.csv",
+  "is_physics_informed": true,
+  "metrics_path": "/home/lucas-perrier/Documents/projects/scaling-piml/runs-pilot/model=piml/capacity=small/D=64/data_seed=11/train_seed=101/metrics.json",
+  "model_name": "piml",
+  "nan_detected": false,
+  "parameter_count": 4482,
+  "run_dir": "/home/lucas-perrier/Documents/projects/scaling-piml/runs-pilot/model=piml/capacity=small/D=64/data_seed=11/train_seed=101",
+  "runtime_seconds": 0.11569356918334961,
+  "status": "success",
+  "test_mse": 0.026503168046474457,
+  "test_rel_l2": 0.079057976603508,
+  "train_mse": 0.025164403021335602,
+  "train_rel_l2": 0.06914132833480835,
+  "train_seed": 101,
+  "val_mse": 0.03613102808594704,
+  "val_rel_l2": 0.0760113075375557
+}

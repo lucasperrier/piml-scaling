@@ -1,0 +1,18 @@
+{
+  "best_epoch": 4,
+  "data_seed": 11,
+  "dataset_size": 64,
+  "diverged": false,
+  "is_physics_informed": false,
+  "model_name": "plain",
+  "nan_detected": false,
+  "parameter_count": 1218,
+  "runtime_seconds": 0.016475677490234375,
+  "test_mse": 0.8952985405921936,
+  "test_rel_l2": 0.9776059985160828,
+  "train_mse": 0.8428427577018738,
+  "train_rel_l2": 0.9648478031158447,
+  "train_seed": 101,
+  "val_mse": 0.9625515937805176,
+  "val_rel_l2": 0.9496208429336548
+}

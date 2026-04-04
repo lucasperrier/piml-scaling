@@ -1,0 +1,5 @@
+{
+    "powerquery.client.additionalSymbolsDirectories": [
+        "/home/lucas-perrier/Documents/projects/scaling-piml/.vscode/excel-pq-symbols"
+    ]
+}

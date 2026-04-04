@@ -1,0 +1,208 @@
+{
+  "best_epoch_summary": {
+    "mean": 54.708333333333336,
+    "std": 7.703636446039859
+  },
+  "checks": {
+    "error_vs_D": [
+      {
+        "axis": "dataset_size",
+        "capacity_name": "small",
+        "max_relative_increase": 0.0,
+        "metric_values": [
+          0.0918392613530159,
+          0.0747898370027542,
+          0.0282270750030875
+        ],
+        "model_name": "piml",
+        "n_points": 3,
+        "reversals": 0,
+        "status": "pass",
+        "x_values": [
+          64,
+          128,
+          256
+        ]
+      },
+      {
+        "axis": "dataset_size",
+        "capacity_name": "tiny",
+        "max_relative_increase": 0.0,
+        "metric_values": [
+          0.116873450577259,
+          0.1179724372923374,
+          0.0689042136073112
+        ],
+        "model_name": "piml",
+        "n_points": 3,
+        "reversals": 0,
+        "status": "pass",
+        "x_values": [
+          64,
+          128,
+          256
+        ]
+      },
+      {
+        "axis": "dataset_size",
+        "capacity_name": "small",
+        "max_relative_increase": 0.0,
+        "metric_values": [
+          0.0908456221222877,
+          0.0742366090416908,
+          0.0211562784388661
+        ],
+        "model_name": "plain",
+        "n_points": 3,
+        "reversals": 0,
+        "status": "pass",
+        "x_values": [
+          64,
+          128,
+          256
+        ]
+      },
+      {
+        "axis": "dataset_size",
+        "capacity_name": "tiny",
+        "max_relative_increase": 0.0,
+        "metric_values": [
+          0.1140274070203304,
+          0.1146401762962341,
+          0.0654353518038988
+        ],
+        "model_name": "plain",
+        "n_points": 3,
+        "reversals": 0,
+        "status": "pass",
+        "x_values": [
+          64,
+          128,
+          256
+        ]
+      }
+    ],
+    "error_vs_N": [
+      {
+        "axis": "parameter_count",
+        "dataset_size": 64,
+        "max_relative_increase": 0.0,
+        "metric_values": [
+          0.116873450577259,
+          0.0918392613530159
+        ],
+        "model_name": "piml",
+        "n_points": 2,
+        "reversals": 0,
+        "status": "pass",
+        "x_values": [
+          1218,
+          4482
+        ]
+      },
+      {
+        "axis": "parameter_count",
+        "dataset_size": 128,
+        "max_relative_increase": 0.0,
+        "metric_values": [
+          0.1179724372923374,
+          0.0747898370027542
+        ],
+        "model_name": "piml",
+        "n_points": 2,
+        "reversals": 0,
+        "status": "pass",
+        "x_values": [
+          1218,
+          4482
+        ]
+      },
+      {
+        "axis": "parameter_count",
+        "dataset_size": 256,
+        "max_relative_increase": 0.0,
+        "metric_values": [
+          0.0689042136073112,
+          0.0282270750030875
+        ],
+        "model_name": "piml",
+        "n_points": 2,
+        "reversals": 0,
+        "status": "pass",
+        "x_values": [
+          1218,
+          4482
+        ]
+      },
+      {
+        "axis": "parameter_count",
+        "dataset_size": 64,
+        "max_relative_increase": 0.0,
+        "metric_values": [
+          0.1140274070203304,
+          0.0908456221222877
+        ],
+        "model_name": "plain",
+        "n_points": 2,
+        "reversals": 0,
+        "status": "pass",
+        "x_values": [
+          1218,
+          4482
+        ]
+      },
+      {
+        "axis": "parameter_count",
+        "dataset_size": 128,
+        "max_relative_increase": 0.0,
+        "metric_values": [
+          0.1146401762962341,
+          0.0742366090416908
+        ],
+        "model_name": "plain",
+        "n_points": 2,
+        "reversals": 0,
+        "status": "pass",
+        "x_values": [
+          1218,
+          4482
+        ]
+      },
+      {
+        "axis": "parameter_count",
+        "dataset_size": 256,
+        "max_relative_increase": 0.0,
+        "metric_values": [
+          0.0654353518038988,
+          0.0211562784388661
+        ],
+        "model_name": "plain",
+        "n_points": 2,
+        "reversals": 0,
+        "status": "pass",
+        "x_values": [
+          1218,
+          4482
+        ]
+      }
+    ]
+  },
+  "gate": {
+    "all_error_vs_D_checks_pass": true,
+    "all_error_vs_N_checks_pass": true,
+    "enough_data": true,
+    "ready_for_full_sweep": true,
+    "stability_ok": true
+  },
+  "max_divergence_rate": 0.3,
+  "metric": "test_rel_l2_mean",
+  "relative_tolerance": 0.05,
+  "run_summary": {
+    "divergence_rate": 0.0,
+    "nan_rate": 0.0,
+    "status_counts": {
+      "success": 24
+    },
+    "total_runs": 24
+  }
+}
