@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 import json
+import os as _os
+import subprocess
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 import streamlit as st
 
 try:
@@ -16,18 +20,19 @@ except Exception:
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 
-# Allow overriding via query params or env; default to runs-dense for the active experiment
-import os as _os
-
 _runs_name = _os.environ.get("DASHBOARD_RUNS", "runs-dense")
 RUNS_ROOT = BASE_DIR / _runs_name
-PROGRESS_DIR = RUNS_ROOT  # aggregate/grouped land in the same dir
+PROGRESS_DIR = RUNS_ROOT
 AGGREGATE_PATH = PROGRESS_DIR / "runs_aggregate.csv"
 GROUPED_PATH = PROGRESS_DIR / "grouped_metrics.csv"
 SCALING_PATH = PROGRESS_DIR / "scaling_fits.json"
+LOGS_DIR = BASE_DIR / "logs"
 
+MODELS = ["plain", "piml", "piml-simpson"]
+TARGET_PER_MODEL = 693
+TARGET_TOTAL = TARGET_PER_MODEL * len(MODELS)
 
-st.set_page_config(page_title="Scaling-PIML Live Dashboard", layout="wide")
+st.set_page_config(page_title="Scaling-PIML Dashboard", layout="wide")
 
 
 def _safe_read_csv(path: Path) -> pd.DataFrame:
@@ -69,46 +74,229 @@ def _load_data() -> tuple[pd.DataFrame, pd.DataFrame, dict]:
     return aggregate, grouped, fits
 
 
-st.title("Scaling-PIML Live Dashboard")
-st.caption("Auto-updating dashboard for sweep progress, scaling fits, and model comparisons.")
+# ---------------------------------------------------------------------------
+# Live monitor helpers
+# ---------------------------------------------------------------------------
+
+def _model_capacity_progress() -> pd.DataFrame:
+    """Build a DataFrame of (model, capacity, completed, total) from the runs tree."""
+    rows = []
+    if not RUNS_ROOT.exists():
+        return pd.DataFrame(rows, columns=["model", "capacity", "completed"])
+    for model_dir in sorted(RUNS_ROOT.glob("model=*")):
+        model = model_dir.name.split("=", 1)[1]
+        for cap_dir in sorted(model_dir.glob("capacity=*")):
+            cap = cap_dir.name.split("=", 1)[1]
+            n = sum(1 for _ in cap_dir.rglob("metrics.json"))
+            rows.append({"model": model, "capacity": cap, "completed": n})
+    return pd.DataFrame(rows)
+
+
+def _per_model_counts() -> dict[str, int]:
+    counts: dict[str, int] = {}
+    if not RUNS_ROOT.exists():
+        return counts
+    for md in sorted(RUNS_ROOT.glob("model=*")):
+        mname = md.name.split("=", 1)[1]
+        counts[mname] = sum(1 for _ in md.rglob("metrics.json"))
+    return counts
+
+
+def _latest_log_path() -> Path | None:
+    if not LOGS_DIR.exists():
+        return None
+    logs = sorted(LOGS_DIR.glob("step21_*.log"), key=lambda p: p.stat().st_mtime, reverse=True)
+    if not logs:
+        logs = sorted(LOGS_DIR.glob("*.log"), key=lambda p: p.stat().st_mtime, reverse=True)
+    return logs[0] if logs else None
+
+
+def _tail_log(path: Path, n: int = 30) -> str:
+    try:
+        lines = path.read_text().splitlines()
+        return "\n".join(lines[-n:])
+    except Exception:
+        return "(unable to read log)"
+
+
+def _gpu_stats() -> dict:
+    """Query nvidia-smi for GPU stats. Returns empty dict if unavailable."""
+    try:
+        out = subprocess.check_output(
+            ["nvidia-smi", "--query-gpu=name,utilization.gpu,memory.used,memory.total,temperature.gpu,power.draw",
+             "--format=csv,noheader,nounits"],
+            timeout=5, text=True,
+        ).strip()
+        parts = [p.strip() for p in out.split(",")]
+        if len(parts) >= 6:
+            return {
+                "name": parts[0],
+                "util_pct": float(parts[1]),
+                "mem_used_mb": float(parts[2]),
+                "mem_total_mb": float(parts[3]),
+                "temp_c": float(parts[4]),
+                "power_w": float(parts[5]),
+            }
+    except Exception:
+        pass
+    return {}
+
+
+def _run_timestamps() -> list[float]:
+    """Collect mtime of every metrics.json under RUNS_ROOT, sorted ascending."""
+    if not RUNS_ROOT.exists():
+        return []
+    times = []
+    for p in RUNS_ROOT.rglob("metrics.json"):
+        times.append(p.stat().st_mtime)
+    times.sort()
+    return times
+
+
+def _estimate_eta(completed: int, total: int, timestamps: list[float]) -> str:
+    remaining = total - completed
+    if remaining <= 0:
+        return "Done!"
+    if len(timestamps) < 5:
+        return "Collecting data..."
+    # Use last 20 runs to estimate recent rate
+    window = timestamps[-min(20, len(timestamps)):]
+    elapsed = window[-1] - window[0]
+    n_in_window = len(window) - 1
+    if elapsed <= 0 or n_in_window <= 0:
+        return "Estimating..."
+    rate = n_in_window / elapsed  # runs per second
+    eta_s = remaining / rate
+    if eta_s < 60:
+        return f"~{eta_s:.0f}s"
+    if eta_s < 3600:
+        return f"~{eta_s / 60:.0f}m"
+    return f"~{eta_s / 3600:.1f}h"
+
+
+st.title("Scaling-PIML Dashboard")
 
 with st.sidebar:
     st.header("Refresh")
-    refresh_seconds = st.slider("Auto-refresh interval (seconds)", min_value=5, max_value=120, value=20)
+    refresh_seconds = st.slider("Auto-refresh interval (seconds)", min_value=5, max_value=120, value=15)
     if st_autorefresh is not None:
         st_autorefresh(interval=refresh_seconds * 1000, key="dashboard_refresh")
     else:
         st.warning("Install streamlit-autorefresh for automatic updates.")
 
     st.header("Data sources")
-    st.write(f"runs root: {RUNS_ROOT}")
-    st.write(f"progress dir: {PROGRESS_DIR}")
+    st.write(f"runs root: `{RUNS_ROOT}`")
+    st.write(f"logs dir: `{LOGS_DIR}`")
 
     st.header("View")
-    dashboard_mode = st.radio("Layout", options=["Paper Mode", "Standard"], index=0)
+    dashboard_mode = st.radio("Layout", options=["Live Monitor", "Paper Mode", "Standard"], index=0)
+
+# ===== LIVE MONITOR TAB =====
+if dashboard_mode == "Live Monitor":
+    model_counts = _per_model_counts()
+    completed_runs = sum(model_counts.values())
+    timestamps = _run_timestamps()
+    eta = _estimate_eta(completed_runs, TARGET_TOTAL, timestamps)
+
+    # ---- Top KPI row ----
+    k1, k2, k3, k4 = st.columns(4)
+    k1.metric("Total Progress", f"{completed_runs} / {TARGET_TOTAL}")
+    k2.metric("Completion", f"{100 * completed_runs / TARGET_TOTAL:.1f}%")
+    k3.metric("ETA", eta)
+    gpu = _gpu_stats()
+    k4.metric("GPU", f"{gpu.get('name', 'N/A')}")
+
+    st.progress(min(completed_runs / TARGET_TOTAL, 1.0))
+
+    # ---- GPU gauges ----
+    if gpu:
+        st.subheader("GPU")
+        g1, g2, g3, g4 = st.columns(4)
+        g1.metric("Utilization", f"{gpu['util_pct']:.0f}%")
+        g2.metric("VRAM", f"{gpu['mem_used_mb']:.0f} / {gpu['mem_total_mb']:.0f} MB")
+        g3.metric("Temperature", f"{gpu['temp_c']:.0f} °C")
+        g4.metric("Power", f"{gpu['power_w']:.0f} W")
+    else:
+        st.info("GPU stats unavailable (nvidia-smi not found — run dashboard on the pod for GPU metrics).")
+
+    # ---- Per-model progress bars ----
+    st.subheader("Per-Model Progress")
+    cols = st.columns(len(MODELS))
+    for i, m in enumerate(MODELS):
+        c = model_counts.get(m, 0)
+        pct = c / TARGET_PER_MODEL if TARGET_PER_MODEL else 0
+        cols[i].metric(m, f"{c} / {TARGET_PER_MODEL}")
+        cols[i].progress(min(pct, 1.0))
+
+    # ---- Capacity breakdown heatmap ----
+    st.subheader("Progress Grid (model × capacity)")
+    cap_df = _model_capacity_progress()
+    if not cap_df.empty:
+        pivot = cap_df.pivot_table(index="model", columns="capacity", values="completed", fill_value=0)
+        fig_grid = go.Figure(data=go.Heatmap(
+            z=pivot.values,
+            x=[str(c) for c in pivot.columns],
+            y=[str(r) for r in pivot.index],
+            text=pivot.values.astype(int).astype(str),
+            texttemplate="%{text}",
+            colorscale="Greens",
+            showscale=False,
+        ))
+        fig_grid.update_layout(
+            title="Completed runs per cell",
+            xaxis_title="Capacity",
+            yaxis_title="Model",
+            height=250,
+        )
+        st.plotly_chart(fig_grid, use_container_width=True)
+
+    # ---- Completion timeline ----
+    if len(timestamps) > 2:
+        st.subheader("Completion Timeline")
+        ts_df = pd.DataFrame({
+            "time": pd.to_datetime(timestamps, unit="s"),
+            "cumulative": range(1, len(timestamps) + 1),
+        })
+        fig_ts = px.line(ts_df, x="time", y="cumulative", title="Cumulative completed runs over time")
+        fig_ts.add_hline(y=TARGET_TOTAL, line_dash="dash", line_color="red", annotation_text=f"target={TARGET_TOTAL}")
+        st.plotly_chart(fig_ts, use_container_width=True)
+
+    # ---- Recent throughput ----
+    if len(timestamps) >= 5:
+        recent = timestamps[-min(50, len(timestamps)):]
+        diffs = [recent[i + 1] - recent[i] for i in range(len(recent) - 1)]
+        avg_sec = sum(diffs) / len(diffs) if diffs else 0
+        st.metric("Avg seconds per run (recent)", f"{avg_sec:.1f}s" if avg_sec else "N/A")
+
+    # ---- Log tail ----
+    st.subheader("Live Log")
+    log_path = _latest_log_path()
+    if log_path:
+        st.caption(f"`{log_path.name}`")
+        st.code(_tail_log(log_path, n=40), language="text")
+    else:
+        st.info("No log files found.")
+
+    st.caption(f"Last refresh: {datetime.now(timezone.utc).strftime('%H:%M:%S UTC')}")
+    st.stop()
 
 aggregate_df, grouped_df, fits = _load_data()
 completed_runs = _count_completed_runs()
 
 # Live progress: count per model directly from metrics.json files
-_model_dirs = sorted(RUNS_ROOT.glob("model=*")) if RUNS_ROOT.exists() else []
-_model_counts = {}
-for _md in _model_dirs:
-    _mname = _md.name.split("=", 1)[1]
-    _model_counts[_mname] = sum(1 for _ in _md.rglob("metrics.json"))
-total_runs = 2079  # 3 models × 693
+_model_counts = _per_model_counts()
 
 st.subheader("Live Sweep Progress")
 _prog_cols = st.columns(max(1, len(_model_counts) + 1))
 for i, (_mn, _mc) in enumerate(_model_counts.items()):
-    _prog_cols[i].metric(f"{_mn}", f"{_mc}/693")
-_prog_cols[len(_model_counts)].metric("Total", f"{completed_runs}/{total_runs}")
-st.progress(min(completed_runs / total_runs, 1.0))
+    _prog_cols[i].metric(f"{_mn}", f"{_mc}/{TARGET_PER_MODEL}")
+_prog_cols[len(_model_counts)].metric("Total", f"{completed_runs}/{TARGET_TOTAL}")
+st.progress(min(completed_runs / TARGET_TOTAL, 1.0))
 
-completion_rate = 100.0 * completed_runs / total_runs if total_runs else 0.0
+completion_rate = 100.0 * completed_runs / TARGET_TOTAL if TARGET_TOTAL else 0.0
 
 c1, c2, c3, c4 = st.columns(4)
-c1.metric("Completed runs", f"{completed_runs}/{total_runs}")
+c1.metric("Completed runs", f"{completed_runs}/{TARGET_TOTAL}")
 c2.metric("Completion", f"{completion_rate:.1f}%")
 c3.metric("Aggregate last update", _last_modified(AGGREGATE_PATH))
 c4.metric("Fits last update", _last_modified(SCALING_PATH))
