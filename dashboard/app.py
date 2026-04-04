@@ -15,8 +15,13 @@ except Exception:
 
 
 BASE_DIR = Path(__file__).resolve().parents[1]
-RUNS_ROOT = BASE_DIR / "runs"
-PROGRESS_DIR = BASE_DIR / "runs-progress"
+
+# Allow overriding via query params or env; default to runs-dense for the active experiment
+import os as _os
+
+_runs_name = _os.environ.get("DASHBOARD_RUNS", "runs-dense")
+RUNS_ROOT = BASE_DIR / _runs_name
+PROGRESS_DIR = RUNS_ROOT  # aggregate/grouped land in the same dir
 AGGREGATE_PATH = PROGRESS_DIR / "runs_aggregate.csv"
 GROUPED_PATH = PROGRESS_DIR / "grouped_metrics.csv"
 SCALING_PATH = PROGRESS_DIR / "scaling_fits.json"
@@ -84,7 +89,22 @@ with st.sidebar:
 
 aggregate_df, grouped_df, fits = _load_data()
 completed_runs = _count_completed_runs()
-total_runs = 720
+
+# Live progress: count per model directly from metrics.json files
+_model_dirs = sorted(RUNS_ROOT.glob("model=*")) if RUNS_ROOT.exists() else []
+_model_counts = {}
+for _md in _model_dirs:
+    _mname = _md.name.split("=", 1)[1]
+    _model_counts[_mname] = sum(1 for _ in _md.rglob("metrics.json"))
+total_runs = 2079  # 3 models × 693
+
+st.subheader("Live Sweep Progress")
+_prog_cols = st.columns(max(1, len(_model_counts) + 1))
+for i, (_mn, _mc) in enumerate(_model_counts.items()):
+    _prog_cols[i].metric(f"{_mn}", f"{_mc}/693")
+_prog_cols[len(_model_counts)].metric("Total", f"{completed_runs}/{total_runs}")
+st.progress(min(completed_runs / total_runs, 1.0))
+
 completion_rate = 100.0 * completed_runs / total_runs if total_runs else 0.0
 
 c1, c2, c3, c4 = st.columns(4)
@@ -94,10 +114,11 @@ c3.metric("Aggregate last update", _last_modified(AGGREGATE_PATH))
 c4.metric("Fits last update", _last_modified(SCALING_PATH))
 
 if aggregate_df.empty or grouped_df.empty:
-    st.error(
-        "No aggregated data found yet. Run aggregate script first: "
-        "python scripts/aggregate_runs.py --runs-root runs --out-dir runs-progress"
+    st.info(
+        "No aggregated data found yet. Run aggregate script to see scaling plots: "
+        f"`python scripts/aggregate_runs.py {RUNS_ROOT}`"
     )
+    st.caption("Dashboard auto-refreshes and updates when new metrics.json files appear.")
     st.stop()
 
 # Normalize types

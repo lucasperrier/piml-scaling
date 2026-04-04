@@ -45,7 +45,9 @@ def parameter_count(model: nn.Module) -> int:
 CAPACITY_GRID: dict[str, list[int]] = {
     "tiny": [32, 32],
     "small": [64, 64],
+    "small-med": [96, 96],
     "medium": [128, 128],
+    "med-large": [192, 192],
     "large": [256, 256],
     "xlarge": [256, 256, 256],
 }
