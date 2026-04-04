@@ -87,7 +87,8 @@ def train_one_run(
     ).to(device)
     n_params = parameter_count(model)
 
-    batch_size = min(cfg.train.batch_size_cap, dataset_size)
+    gpu_batch_cap = 1024 if device.type == "cuda" else cfg.train.batch_size_cap
+    batch_size = min(gpu_batch_cap, dataset_size)
     _pin = device.type == "cuda"
     _workers = 2 if _pin else 0
 
