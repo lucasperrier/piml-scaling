@@ -206,6 +206,10 @@ src/scaling_piml/  Source package
 tests/             Pytest tests
 ```
 
+## Remote execution on RunPod
+
+See [`docs/runpod.md`](docs/runpod.md) for a step-by-step guide to launching a GPU pod, connecting via SSH, and running experiments on RunPod. A one-shot setup script is provided at `scripts/setup_runpod.sh`.
+
 ## Quickstart
 
 ```bash
