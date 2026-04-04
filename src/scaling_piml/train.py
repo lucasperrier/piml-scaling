@@ -19,7 +19,10 @@ from .utils.seed import seed_everything
 
 
 def _device() -> torch.device:
-    return torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if torch.cuda.is_available():
+        torch.backends.cudnn.benchmark = True
+        return torch.device("cuda")
+    return torch.device("cpu")
 
 
 def _physical_batch(loader: DataLoader, x: torch.Tensor, y: torch.Tensor, yhat: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
@@ -38,8 +41,8 @@ def evaluate(model: torch.nn.Module, loader: DataLoader, device: torch.device, *
     rels = []
     mses = []
     for x, y in loader:
-        x = x.to(device)
-        y = y.to(device)
+        x = x.to(device, non_blocking=True)
+        y = y.to(device, non_blocking=True)
         yhat = model(x)
         if slice_last2:
             yhat = yhat[:, 2:]
@@ -85,10 +88,12 @@ def train_one_run(
     n_params = parameter_count(model)
 
     batch_size = min(cfg.train.batch_size_cap, dataset_size)
+    _pin = device.type == "cuda"
+    _workers = 2 if _pin else 0
 
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=256, shuffle=False)
-    test_loader = DataLoader(test_dataset, batch_size=256, shuffle=False)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=_workers, pin_memory=_pin, persistent_workers=_workers > 0)
+    val_loader = DataLoader(val_dataset, batch_size=256, shuffle=False, num_workers=_workers, pin_memory=_pin, persistent_workers=_workers > 0)
+    test_loader = DataLoader(test_dataset, batch_size=256, shuffle=False, num_workers=_workers, pin_memory=_pin, persistent_workers=_workers > 0)
 
     opt = torch.optim.Adam(model.parameters(), lr=cfg.train.lr, weight_decay=cfg.train.weight_decay)
 
@@ -124,8 +129,8 @@ def train_one_run(
             epoch_grad_norms = []
 
             for x, y in tqdm(train_loader, desc=f"epoch {epoch}", leave=False):
-                x = x.to(device)
-                y = y.to(device)
+                x = x.to(device, non_blocking=True)
+                y = y.to(device, non_blocking=True)
                 opt.zero_grad(set_to_none=True)
                 pred = model(x)
 
