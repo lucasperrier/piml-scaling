@@ -1,0 +1,55 @@
+{
+  "ground_truth_residual": {
+    "residual_l2_mean": 0.36272311210632324,
+    "residual_l2_std": 0.14119939506053925,
+    "residual_l2_median": 0.38277363777160645,
+    "residual_l2_max": 0.9527767896652222,
+    "residual_l2_min": 0.012388554401695728,
+    "relative_residual_mean": 0.14963896572589874,
+    "relative_residual_std": 0.10805909335613251,
+    "relative_residual_max": 0.9047721028327942,
+    "uT_norm_mean": 2.8815078735351562,
+    "uT_norm_std": 0.9811112284660339,
+    "physics_loss_on_truth": 0.15149536728858948
+  },
+  "loss_scale_mismatch": {
+    "tiny": {
+      "data_loss_normalized": 0.9625398516654968,
+      "physics_loss_physical": 1.2242350578308105,
+      "ratio_phys_over_data": 1.2718798662855348,
+      "effective_phys_contribution": 0.12242350578308106,
+      "effective_ratio": 0.1271879866285535
+    },
+    "small": {
+      "data_loss_normalized": 1.0434200763702393,
+      "physics_loss_physical": 1.1866999864578247,
+      "ratio_phys_over_data": 1.137317570681614,
+      "effective_phys_contribution": 0.11866999864578248,
+      "effective_ratio": 0.11373175706816141
+    },
+    "large": {
+      "data_loss_normalized": 0.9459744095802307,
+      "physics_loss_physical": 1.1801490783691406,
+      "ratio_phys_over_data": 1.2475486296641187,
+      "effective_phys_contribution": 0.11801490783691407,
+      "effective_ratio": 0.12475486296641188
+    }
+  },
+  "gradient_scale": {
+    "tiny": {
+      "grad_norm_data_loss": 1.2151490209226767,
+      "grad_norm_physics_loss": 2.182342723020443,
+      "grad_norm_ratio_phys_over_data": 1.7959465756416977,
+      "effective_grad_ratio_at_lambda": 0.17959465756416976
+    },
+    "small": {
+      "grad_norm_data_loss": 1.1585341448414082,
+      "grad_norm_physics_loss": 2.284383825102196,
+      "grad_norm_ratio_phys_over_data": 1.9717880869319613,
+      "effective_grad_ratio_at_lambda": 0.19717880869319615
+    }
+  },
+  "issues": [
+    "RESIDUAL PROXY: Ground-truth midpoint residual is 15.0% relative. The implicit midpoint rule is not a faithful surrogate for the true flow map at T=1.0. The physics loss penalizes correct predictions."
+  ]
+}

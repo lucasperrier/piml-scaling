@@ -24,10 +24,14 @@ def main() -> None:
         help="Optional capacity name (e.g. small) to override hidden widths",
     )
     p.add_argument("--out", type=str, default=None)
+    p.add_argument("--lambda-phys", type=float, default=None, help="Override lambda_phys")
 
     args = p.parse_args()
 
     cfg = load_experiment_config(args.config)
+
+    if args.lambda_phys is not None:
+        cfg.train.lambda_phys = args.lambda_phys
 
     if args.capacity is not None:
         from scaling_piml.models.mlp import CAPACITY_GRID

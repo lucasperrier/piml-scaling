@@ -96,6 +96,7 @@ def main() -> None:
     parser.add_argument("--train-seeds", type=str, default=None, help="Comma-separated train seeds")
     parser.add_argument("--pilot", action="store_true", help="Run the recommended pilot subset")
     parser.add_argument("--overwrite", action="store_true", help="Re-run even if metrics.json already exists")
+    parser.add_argument("--lambda-phys", type=float, default=None, help="Override lambda_phys for PIML runs")
     args = parser.parse_args()
 
     cfg = load_experiment_config(args.config)
@@ -139,6 +140,8 @@ def main() -> None:
 
                         run_cfg = deepcopy(cfg)
                         run_cfg.model.hidden_widths = CAPACITY_GRID[capacity_name]
+                        if args.lambda_phys is not None:
+                            run_cfg.train.lambda_phys = args.lambda_phys
 
                         train_ds = FlowMapDataset(data_root, "train", D=dataset_size, normalize=True)
                         val_ds = FlowMapDataset(data_root, "val", normalize=True)

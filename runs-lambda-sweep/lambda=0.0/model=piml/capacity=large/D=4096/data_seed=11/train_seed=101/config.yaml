@@ -1,0 +1,48 @@
+system:
+  alpha: 1.5
+  beta: 1.0
+  delta: 1.0
+  gamma: 3.0
+solver:
+  method: DOP853
+  rtol: 1.0e-09
+  atol: 1.0e-11
+data:
+  T: 1.0
+  x0_low: 0.5
+  x0_high: 2.5
+  y0_low: 0.5
+  y0_high: 2.5
+  train_pool: 20000
+  val_size: 2000
+  test_size: 2000
+  dataset_sizes:
+  - 64
+  - 128
+  - 256
+  - 512
+  - 1024
+  - 2048
+  - 4096
+  - 8192
+  data_seeds:
+  - 11
+  - 22
+  - 33
+model:
+  activation: relu
+  hidden_widths:
+  - 256
+  - 256
+train:
+  lr: 0.001
+  weight_decay: 1.0e-06
+  batch_size_cap: 128
+  max_epochs: 400
+  early_stopping_patience: 40
+  lambda_phys: 0.0
+  train_seeds:
+  - 101
+  - 202
+  - 303
+out_dir: runs

@@ -101,6 +101,8 @@ def train_one_run(
                 "train_loss",
                 "train_data_loss",
                 "train_phys_loss",
+                "phys_data_ratio",
+                "grad_norm",
                 "val_rel_l2",
                 "val_mse",
             ],
@@ -116,6 +118,7 @@ def train_one_run(
             losses = []
             data_losses = []
             phys_losses = []
+            epoch_grad_norms = []
 
             for x, y in tqdm(train_loader, desc=f"epoch {epoch}", leave=False):
                 x = x.to(device)
@@ -153,6 +156,11 @@ def train_one_run(
                     break
 
                 L.backward()
+                grad_norms = []
+                for param in model.parameters():
+                    if param.grad is not None:
+                        grad_norms.append(param.grad.norm().item() ** 2)
+                epoch_grad_norms.append(sum(grad_norms) ** 0.5)
                 opt.step()
 
             if diverged:
@@ -160,12 +168,18 @@ def train_one_run(
 
             val_metrics = evaluate(model, val_loader, device)
 
+            avg_data = float(sum(data_losses) / max(1, len(data_losses)))
+            avg_phys = float(sum(phys_losses) / max(1, len(phys_losses)))
+            ratio = avg_phys / max(avg_data, 1e-15) if avg_data > 0 else 0.0
+
             writer.writerow(
                 {
                     "epoch": epoch,
                     "train_loss": float(sum(losses) / max(1, len(losses))),
-                    "train_data_loss": float(sum(data_losses) / max(1, len(data_losses))),
-                    "train_phys_loss": float(sum(phys_losses) / max(1, len(phys_losses))),
+                    "train_data_loss": avg_data,
+                    "train_phys_loss": avg_phys,
+                    "phys_data_ratio": ratio,
+                    "grad_norm": float(sum(epoch_grad_norms) / max(1, len(epoch_grad_norms))),
                     "val_rel_l2": val_metrics["rel_l2"],
                     "val_mse": val_metrics["mse"],
                 }
