@@ -17,6 +17,8 @@
 \usepackage{setspace}
 \usepackage{xcolor}
 
+\graphicspath{{../figures-progress/}}
+
 \hypersetup{
   colorlinks=true,
   linkcolor=blue,
@@ -103,16 +105,20 @@ Our contributions are:
 \subsection{Physics-informed scientific machine learning}
 
 Physics-informed learning methods inject scientific structure into machine learning models in several ways.
-Soft approaches typically introduce residual penalties derived from governing equations~\cite{raissi2019pinn,cuomo2022}.
+Soft approaches typically introduce residual penalties derived from governing equations~\cite{raissi2019pinn,cuomo2022}, with variants such as fractional PINNs~\cite{pang2019fpinns}.
 Harder approaches build physical structure directly into the architecture or parameterization~\cite{willard2022,chen2018node}.
-While these methods are widely studied, their evaluation is often benchmark-specific and restricted to a small number of scales.
+Operator-learning architectures such as DeepONet~\cite{lu2019deeponet} and Fourier Neural Operators~\cite{li2020fno} learn solution operators between function spaces.
+These methods have been applied to fluid dynamics, climate modelling~\cite{kashinath2021}, and multiscale closure problems~\cite{sanderse2024}.
+However, most evaluations are architecture- and problem-specific, comparing models at fixed dataset sizes and capacities~\cite{cuomo2022,ren2025}.
+Physics-informed architectures also exhibit non-trivial optimization pathologies: PINNs can fail to train due to ill-conditioned neural tangent kernels~\cite{wang2022ntk}.
 
 \subsection{Empirical scaling laws}
 
 Empirical scaling laws describe how performance changes as a function of data, model size, or compute.
-In natural language processing and vision, such laws have proven useful both descriptively and operationally~\cite{kaplan2020,hestness2017}.
+In natural language processing and vision, such laws have proven useful both descriptively and operationally~\cite{kaplan2020,hestness2017,henighan2020}.
 They provide a compact summary of learning efficiency and can reveal regime changes or diminishing returns.
 Recent work explains scaling phenomena through variance-limited and resolution-limited regimes~\cite{bahri2024}, while constructive models can predict generalization error across scales~\cite{rosenfeld2019}.
+A recent survey documents similar power-law behavior across a wide range of machine learning settings~\cite{wang2024scaling}.
 
 \subsection{Scaling as an evaluation lens for SciML}
 
@@ -317,14 +323,28 @@ The near-zero error floor indicates that adding more data and capacity continues
 
 \begin{figure}[H]
     \centering
-    \fbox{\parbox[c][2.4in][c]{0.85\textwidth}{\centering \status{Generate plots from runs-progress data: test error vs.\ $D$ for each capacity, log--log axes, plain model only.}}}
-    \caption{Data scaling for the plain MLP baseline.
-    Test error decreases as a power law with exponent $\hat{\beta} \approx 0.85$.}
-    \label{fig:plain-data-scaling}
+    \includegraphics[width=\textwidth]{fig_data_scaling.pdf}
+    \caption{Data scaling for the plain MLP and midpoint PIML models.
+    Left to right: small, medium, and large capacity.
+    The plain MLP (blue circles) exhibits clean power-law decay with exponent $\hat{\beta} \approx 0.85$.
+    The midpoint-residual PIML (red squares) saturates at $E \approx 0.014$--$0.016$ regardless of dataset size, reflecting the irreducible physics-loss floor.}
+    \label{fig:data-scaling}
 \end{figure}
 
 \subsection{ODE-residual prior: biased scaling}
 \label{sec:results-midpoint}
+
+\Cref{fig:capacity-scaling} shows the complementary view: test error versus model capacity at fixed dataset sizes.
+The plain MLP error decreases steadily with $N$, while the midpoint PIML flattens, confirming that additional capacity cannot overcome the biased prior.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{fig_capacity_scaling.pdf}
+    \caption{Capacity scaling: test error versus parameter count $N$ at representative dataset sizes.
+    The plain MLP (blue) follows a power law with $\hat{\alpha} \approx 0.91$.
+    The midpoint PIML (red) shows minimal improvement beyond the physics-loss plateau.}
+    \label{fig:capacity-scaling}
+\end{figure}
 
 The midpoint-residual PIML model (with $\lambda_{\mathrm{phys}} = 0.1$) shows qualitatively different scaling behavior.
 Test errors plateau at approximately $E \approx 0.014$--$0.016$ across all $(N,D)$ configurations, with weak dependence on either axis:
@@ -352,9 +372,9 @@ The high error floor (20$\times$ the plain model's best error) and shallow expon
 
 \begin{figure}[H]
     \centering
-    \fbox{\parbox[c][2.4in][c]{0.85\textwidth}{\centering \status{Generate comparative plot: plain vs.\ midpoint PIML, test error vs.\ $D$, at fixed large capacity.}}}
-    \caption{Comparative data scaling for the plain and midpoint-residual models at large capacity.
-    The PIML model saturates at the physics-loss floor.}
+    \includegraphics[width=0.7\textwidth]{fig_comparative_data_scaling.pdf}
+    \caption{Comparative data scaling at large capacity ($N = 67{,}074$).
+    The plain MLP continues to improve with data, while the midpoint-residual PIML saturates at $E \approx 0.014$, determined by the biased physics-loss floor rather than data availability.}
     \label{fig:midpoint-vs-plain}
 \end{figure}
 
@@ -426,6 +446,27 @@ Larger models, with their higher-dimensional parameter space, appear more suscep
 
 \subsection{Comparative scaling-law fits}
 
+\Cref{fig:error-heatmap} visualizes the full error surface $E(N,D)$ for both models, and \Cref{fig:exponent-comparison} compares the fitted scaling exponents with bootstrap confidence intervals.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{fig_error_heatmap.pdf}
+    \caption{Error surface $E(N,D)$ for the plain MLP (left) and midpoint PIML (right).
+    The plain model shows a smooth gradient from high error (low $N$, low $D$) to low error (high $N$, high $D$).
+    The PIML model is dominated by a uniform plateau near $E \approx 0.015$.}
+    \label{fig:error-heatmap}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{fig_exponent_comparison.pdf}
+    \caption{Fitted scaling exponents with 95\% bootstrap confidence intervals from the joint $E(N,D)$ surface fit.
+    Left: capacity exponent $\alpha$.
+    Right: data exponent $\beta$.
+    The midpoint PIML exponents are substantially smaller, reflecting the dominance of the physics-loss floor over both scaling axes.}
+    \label{fig:exponent-comparison}
+\end{figure}
+
 \begin{table}[H]
     \centering
     \caption{Fitted scaling parameters and failure modes across the three models.}
@@ -453,9 +494,10 @@ This stochastic failure mode is qualitatively different from the midpoint prior'
 
 \begin{figure}[H]
     \centering
-    \fbox{\parbox[c][2.4in][c]{0.85\textwidth}{\centering \status{Generate heatmap of best-epoch across $(N,D)$ for each model.}}}
-    \caption{Training duration (best epoch) across the $(N,D)$ grid.
-    The midpoint PIML model early-stops much sooner due to the physics-loss plateau.}
+    \includegraphics[width=\textwidth]{fig_stability_summary.pdf}
+    \caption{Training stability summary.
+    Left: divergence rate versus dataset size (zero for both models across all configurations).
+    Right: seed-to-seed variance of test error, showing that the midpoint PIML exhibits lower variance (converging consistently to the physics-loss plateau) while the plain MLP shows higher variance at small $D$.}
     \label{fig:stability}
 \end{figure}
 
@@ -499,6 +541,22 @@ The monotonic dose--response pattern rules out isolated hyperparameter failure a
 
 The conservation-law $\lambda$ sweep results are presented in \cref{sec:results-conservation} and show a qualitatively different pattern: non-monotonic, seed-dependent trapping rather than smooth degradation.
 
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{fig_lambda_midpoint.pdf}
+    \caption{Midpoint-residual prior: $\lambda_{\mathrm{phys}}$ sensitivity at small (left) and large (right) capacities.
+    The monotonic dose--response pattern is characteristic of a biased prior: increasing $\lambda$ smoothly degrades performance, with no beneficial regime.}
+    \label{fig:lambda-midpoint}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{fig_lambda_conservation.pdf}
+    \caption{Conservation-law prior: $\lambda_{\mathrm{phys}}$ sensitivity at small (left) and large (right) capacities.
+    Unlike the midpoint prior's smooth degradation, the conservation prior shows non-monotonic behavior with seed-dependent trapping, particularly for the large model at intermediate $\lambda$ values.}
+    \label{fig:lambda-conservation}
+\end{figure}
+
 %% ================================================================
 %%  DISCUSSION
 %% ================================================================
@@ -506,18 +564,20 @@ The conservation-law $\lambda$ sweep results are presented in \cref{sec:results-
 
 \subsection{Scaling signatures as prior diagnostics}
 
-The central finding so far is that the scaling-law framework provides qualitatively different signatures for the two priors tested:
+The central finding is that the scaling-law framework provides qualitatively different signatures for the two priors tested:
 
 \begin{itemize}[leftmargin=*]
-    \item \textbf{Biased prior (midpoint residual):} elevated error floor ($\hat{E}_\infty \approx 0.011$), shallow exponents ($\hat{\alpha} \approx 0.16$, $\hat{\beta} \approx 0.53$), early stopping at a physics-dominated plateau.
+    \item \textbf{Biased prior (midpoint residual):} elevated error floor ($\hat{E}_\infty \approx 0.011$), shallow exponents ($\hat{\alpha} \approx 0.16$, $\hat{\beta} \approx 0.53$), early stopping at a physics-dominated plateau (\cref{fig:data-scaling,fig:midpoint-vs-plain,fig:exponent-comparison}).
     The scaling law detects a prior--task mismatch.
-    \item \textbf{Exact prior (conservation law):} no elevated error floor when optimization succeeds, but stochastic trapping at test error $\approx 0.09$ for $\sim$40--70\% of large-model seeds.
+    \item \textbf{Exact prior (conservation law):} no elevated error floor when optimization succeeds, but stochastic trapping at test error $\approx 0.09$ for $\sim$40--70\% of large-model seeds (\cref{fig:lambda-conservation}).
     The failure is capacity-dependent (worse for larger models) and non-monotonic in $\lambda$.
     Scaling-law fitting is unreliable because the bimodal error distribution violates the smooth power-law assumption.
 \end{itemize}
 
-This demonstrates that scaling laws are not merely a summarization tool---they can serve as a diagnostic for whether a physics prior is well-matched to the learning task.
-A biased prior distorts the scaling surface deterministically, while an exact-but-misspecified prior (providing only a scalar constraint on a 2D output) creates optimization pathology that manifests as stochastic failure at scale.
+These two failure modes correspond to distinct pathologies in the scaling surface.
+The midpoint prior \emph{raises the floor} of the scaling ansatz (\cref{eq:scaling}), compressing both exponents and producing a uniform, deterministic degradation visible in the error heatmap (\cref{fig:error-heatmap}).
+The conservation prior leaves the floor intact but \emph{corrupts the surface stochastically}: individual runs scatter between the correct basin and a spurious attractor, yielding a bimodal distribution that cannot be summarized by a single power law.
+This distinction---floor-raising versus surface-corrupting---may generalize beyond the present system as a taxonomy for prior--task mismatch.
 
 \subsection{Why the midpoint prior fails}
 
@@ -528,24 +588,83 @@ As the data loss decreases during training, the physics gradient grows relative 
 \frac{\lambda \cdot \nabla \mathcal{L}_{\mathrm{mid}}}{\nabla \mathcal{L}_{\mathrm{data}}} \sim \frac{\lambda \cdot O(1)}{O(\mathcal{L}_{\mathrm{data}})},
 \]
 eventually dominating the optimization.
-This mechanism explains both the observed error plateau and the premature early stopping.
+This mechanism produces the monotonic dose--response degradation in the $\lambda$ sweep (\cref{fig:lambda-midpoint}) and explains both the observed error plateau and the premature early stopping.
 
-\subsection{Relationship to the broader research program}
+The failure connects to the broader concern articulated by Wang et al.~\cite{wang2022ntk}: PDE-residual losses can create ill-conditioned optimization landscapes.
+Our results show that even when training does not fail outright, a biased residual penalty can dominate the combined loss, effectively overriding the data signal.
+This suggests that scaling-law diagnostics may provide an early warning of such pathologies before they manifest as divergence.
 
-This paper is the first pilot in a broader research program to evaluate physics-informed priors via empirical scaling laws (see \cite{bahri2024,lu2021elliptic} for related directions).
-The present work contributes the experimental methodology and a first calibration result on a minimal dynamical system.
-Future work will extend to:
+\subsection{Why the conservation prior fails differently}
+
+The conservation constraint $H(\hat{\bm{x}}_T) = H(\bm{x}_0)$ is exact yet informationally weak: it constrains a single scalar invariant on a 2-dimensional output.
+The level set $\{(u,v) : H(u,v) = c\}$ is a closed curve containing the correct target, but the conservation loss gradient vanishes along the tangent to this curve.
+The combined loss landscape acquires ridge-like structures whose severity increases with model capacity: larger models have more degrees of freedom that can align with the degenerate manifold direction, making them more susceptible to spurious attractors.
+
+This pathology is distinct from the training failures reported for PINNs~\cite{wang2022ntk}, which arise from spectral bias and ill-conditioned neural tangent kernels.
+The conservation failure is geometric rather than spectral: it stems from the rank deficiency of the constraint Jacobian relative to the output dimension.
+An important implication is that informational sufficiency---whether the physics prior constrains all output degrees of freedom---may be as important as bias-freeness when designing physics-informed losses.
+
+\subsection{Implications for different forms of physical inductive bias}
+
+The contrasting failure modes of the two priors tested here suggest a preliminary taxonomy for how different forms of physical inductive bias may interact with scaling behavior:
+
 \begin{itemize}[leftmargin=*]
-    \item multiple ODE regimes and PDE flow-map tasks,
-    \item different forms of physical priors (PINN-style collocation, architectural constraints, operator-learning),
-    \item regime-aware analyses of where scaling laws hold or fail.
+    \item \textbf{Soft residual penalties} (e.g., PINN-style collocation losses~\cite{raissi2019pinn,cuomo2022}) impose approximate dynamic constraints.
+    When the approximation is biased at the task horizon, our results predict a characteristic floor-raising signature in the scaling surface.
+    Multi-step or higher-order collocation methods may reduce this bias, but at increased computational cost.
+    \item \textbf{Exact but partial constraints} (e.g., conservation laws, symmetry penalties) are bias-free but may be informationally insufficient, creating degenerate directions in the loss landscape.
+    Our conservation-prior results suggest that such constraints may introduce capacity-dependent optimization failures.
+    \item \textbf{Hard architectural constraints} (e.g., Hamiltonian or symplectic network structures~\cite{willard2022,chen2018node}) embed physics directly into the parameterization, eliminating certain failure modes by construction but potentially limiting expressiveness.
+    Whether architectural constraints change scaling exponents or merely shift the error curve is an open empirical question.
+    \item \textbf{Operator-learning architectures} (e.g., DeepONet~\cite{lu2019deeponet}, Fourier Neural Operators~\cite{li2020fno}) encode structural assumptions about the solution operator rather than the governing equations.
+    Theoretical work on neural scaling for elliptic PDEs~\cite{lu2021elliptic} suggests that such architectures may have fundamentally different scaling exponents than pointwise prediction models, but empirical validation across problem classes is limited.
 \end{itemize}
+
+A key open question is whether the floor-raising and surface-corrupting failure modes observed here are general signatures that recur across these different prior classes, or whether they are specific to the soft-constraint setting.
+
+\subsection{Connection to scaling-law theory}
+
+Bahri et al.~\cite{bahri2024} explain neural scaling laws through two limiting regimes: a \emph{variance-limited} regime at small data (where error decreases as $D^{-\beta}$) and a \emph{resolution-limited} regime at small model capacity (where error decreases as $N^{-\alpha}$).
+In this framework, the plain MLP in our study operates in a regime where both limitations are active and neither dominates, producing clean power-law behavior across the tested $(N,D)$ grid.
+
+The midpoint prior disrupts this picture by introducing a third limitation: an \emph{approximation-limited} regime in which the irreducible bias of the physics loss creates a floor that dominates both the variance and resolution components.
+This floor manifests as the large $\hat{E}_\infty$ and compressed exponents in \cref{tab:scaling-params}.
+The conservation prior introduces yet another regime: an \emph{optimization-limited} regime where the loss landscape geometry, rather than data or capacity, determines performance.
+These additional regimes are absent from the standard deep-learning scaling framework and may require dedicated theoretical treatment for SciML settings.
+
+The observation that scientific learning problems can be simultaneously variance-limited, resolution-limited, approximation-limited, and optimization-limited---depending on the form of the physics prior---motivates extending scaling-law theory to accommodate structured loss functions and constrained architectures.
+Recent surveys of scaling behavior across machine learning settings~\cite{wang2024scaling} document similar anomalies in other structured domains, suggesting that regime transitions driven by inductive-bias mismatch may be a general phenomenon.
+
+\subsection{Toward a scaling-law framework for SciML}
+
+This paper is the first case study in a broader research program that aims to adapt empirical scaling laws to scientific machine learning and use them as a method-agnostic diagnostic for physics-informed priors.
+The present results establish the experimental methodology on a minimal dynamical system and identify two qualitative failure-mode signatures.
+The research program is organized around four questions that extend beyond the scope of this initial study:
+
+\begin{enumerate}[leftmargin=*, itemsep=0.3em]
+    \item \emph{How should scaling laws be reformulated for dynamical systems and PDE flow maps?}
+    The standard ansatz (\cref{eq:scaling}) assumes smooth power-law behavior, which the conservation prior violates.
+    Extensions may need to incorporate prediction horizon, discretization resolution, and parameter variability as additional scaling axes.
+    \item \emph{Can different physics priors be compared quantitatively through their scaling signatures?}
+    Our results show that even two priors on the same system produce distinct and interpretable signatures.
+    The next step is to test whether these distinctions persist across PINN-style collocation, architectural constraints, and operator-learning approaches~\cite{raissi2019pinn,li2020fno,lu2019deeponet}.
+    \item \emph{Do different forms of inductive bias produce characteristic scaling regimes?}
+    The approximation-limited and optimization-limited regimes identified here may have counterparts for other prior types.
+    Connecting these empirical regimes to the variance-limited/resolution-limited framework of Bahri et al.~\cite{bahri2024} and the generalization bounds of Lu et al.~\cite{lu2021elliptic} is a central theoretical goal.
+    \item \emph{When do scaling behaviors generalize across systems and when do they diverge?}
+    The present study uses a single ODE system.
+    Subsequent work will extend to 1D PDEs (diffusion, Burgers, wave equations) as standard PINN and operator-learning benchmarks~\cite{raissi2019pinn,li2020fno}, followed by more complex nonlinear regimes including 2D Navier--Stokes and multiscale closure problems~\cite{sanderse2024}.
+\end{enumerate}
+
+The staged design---from analytically tractable ODEs to increasingly complex PDE families---is intended to build understanding progressively, identifying which scaling phenomena are universal and which are system-specific.
+A final validation phase will apply the framework to real-world datasets from scientific or industrial contexts to assess whether scaling-based insights obtained under controlled conditions transfer to noisy, imperfect data.
 
 \subsection{Why Lotka--Volterra?}
 
 Lotka--Volterra provides a minimal nonlinear dynamical system that is simple enough for exhaustive sweeps yet nontrivial enough to make inductive bias relevant.
 It possesses an exact first integral, enabling a controlled comparison between an exact and an approximate prior on the same task.
-Conclusions should not be overgeneralized to PDE learning, chaotic systems, or more complex physics-informed architectures.
+The system also generates closed orbits with significant curvature at $T=1.0$, which stresses the midpoint approximation and makes the conservation prior geometrically nontrivial.
+Conclusions should not be overgeneralized to PDE learning, chaotic systems, or more complex physics-informed architectures; the purpose of this study is methodological calibration, not broad empirical generalization.
 
 %% ================================================================
 %%  LIMITATIONS
@@ -666,6 +785,11 @@ J.~Hestness, S.~Narang, N.~Ardalani, et al.
 \newblock Deep learning scaling is predictable, empirically.
 \newblock arXiv:1712.00409, 2017.
 
+\bibitem{henighan2020}
+T.~Henighan, J.~Kaplan, M.~Katz, et al.
+\newblock Scaling laws for autoregressive generative modeling.
+\newblock arXiv:2010.14701, 2020.
+
 \bibitem{kaplan2020}
 J.~Kaplan, S.~McCandlish, T.~Henighan, et al.
 \newblock Scaling laws for neural language models.
@@ -675,6 +799,11 @@ J.~Kaplan, S.~McCandlish, T.~Henighan, et al.
 A.~Karpatne, R.~Kannan, and V.~Kumar.
 \newblock \emph{Knowledge Guided Machine Learning: Accelerating Discovery Using Scientific Knowledge and Data}.
 \newblock Chapman \& Hall/CRC, 2022.
+
+\bibitem{kashinath2021}
+K.~Kashinath, M.~Mustafa, A.~Albert, et al.
+\newblock Physics-informed machine learning: Case studies for weather and climate modelling.
+\newblock \emph{Philosophical Transactions of the Royal Society A}, 379(2194), 2021.
 
 \bibitem{li2020fno}
 Z.~Li, N.~Kovachki, K.~Azizzadenesheli, et al.
@@ -705,6 +834,21 @@ M.~Raissi, P.~Perdikaris, and G.~E. Karniadakis.
 J.~S. Rosenfeld, A.~Rosenfeld, Y.~Belinkov, and N.~Shavit.
 \newblock A constructive prediction of the generalization error across scales.
 \newblock arXiv:1909.12673, 2019.
+
+\bibitem{ren2025}
+Z.~Ren, S.~Zhou, D.~Liu, and Q.~Liu.
+\newblock Physics-informed neural networks: A review of methodological evolution, theoretical foundations, and interdisciplinary frontiers.
+\newblock \emph{Applied Sciences}, 15(14), 2025.
+
+\bibitem{sanderse2024}
+B.~Sanderse, P.~Stinis, R.~Maulik, and S.~E. Ahmed.
+\newblock Scientific machine learning for closure models in multiscale problems: A review.
+\newblock arXiv:2403.02913, 2024.
+
+\bibitem{wang2024scaling}
+C.~Wang, Y.~Wang, Z.~Li, Q.~Jia, and W.~Liu.
+\newblock Scaling laws of data-driven machine learning models: A survey and taxonomy.
+\newblock TechRxiv, 2024.
 
 \bibitem{wang2022ntk}
 S.~Wang, X.~Yu, and P.~Perdikaris.

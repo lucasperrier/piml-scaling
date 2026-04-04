@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023/Debian) (preloaded format=pdflatex 2025.10.30)  4 APR 2026 16:51
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023/Debian) (preloaded format=pdflatex 2025.10.30)  4 APR 2026 17:29
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -473,8 +473,8 @@ Package xcolor Info: Model `HSB' substituted by `hsb' on input line 1371.
 Package xcolor Info: Model `Gray' substituted by `gray' on input line 1372.
 Package xcolor Info: Model `wave' substituted by `hsb' on input line 1373.
 )
-Package hyperref Info: Option `colorlinks' set `true' on input line 25.
-LaTeX Font Info:    Trying to load font information for T1+lmr on input line 42
+Package hyperref Info: Option `colorlinks' set `true' on input line 27.
+LaTeX Font Info:    Trying to load font information for T1+lmr on input line 44
 .
 
 (/usr/share/texmf/tex/latex/lm/t1lmr.fd
@@ -488,24 +488,24 @@ File: l3backend-pdftex.def 2024-01-04 L3 backend support: PDF output (pdfTeX)
 (./draft.aux)
 \openout1 = `draft.aux'.
 
-LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 42.
-LaTeX Font Info:    ... okay on input line 42.
-LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 42.
-LaTeX Font Info:    ... okay on input line 42.
-LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 42.
-LaTeX Font Info:    ... okay on input line 42.
-LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 42.
-LaTeX Font Info:    ... okay on input line 42.
-LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 42.
-LaTeX Font Info:    ... okay on input line 42.
-LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 42.
-LaTeX Font Info:    ... okay on input line 42.
-LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 42.
-LaTeX Font Info:    ... okay on input line 42.
-LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 42.
-LaTeX Font Info:    ... okay on input line 42.
-LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 42.
-LaTeX Font Info:    ... okay on input line 42.
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 44.
+LaTeX Font Info:    ... okay on input line 44.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 44.
+LaTeX Font Info:    ... okay on input line 44.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 44.
+LaTeX Font Info:    ... okay on input line 44.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 44.
+LaTeX Font Info:    ... okay on input line 44.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 44.
+LaTeX Font Info:    ... okay on input line 44.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 44.
+LaTeX Font Info:    ... okay on input line 44.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 44.
+LaTeX Font Info:    ... okay on input line 44.
+LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 44.
+LaTeX Font Info:    ... okay on input line 44.
+LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 44.
+LaTeX Font Info:    ... okay on input line 44.
 
 *geometry* driver: auto-detecting
 *geometry* detected driver: pdftex
@@ -541,21 +541,21 @@ LaTeX Font Info:    ... okay on input line 42.
 * \@reversemarginfalse
 * (1in=72.27pt=25.4mm, 1cm=28.453pt)
 
-LaTeX Info: Redefining \microtypecontext on input line 42.
-Package microtype Info: Applying patch `item' on input line 42.
-Package microtype Info: Applying patch `toc' on input line 42.
-Package microtype Info: Applying patch `eqnum' on input line 42.
+LaTeX Info: Redefining \microtypecontext on input line 44.
+Package microtype Info: Applying patch `item' on input line 44.
+Package microtype Info: Applying patch `toc' on input line 44.
+Package microtype Info: Applying patch `eqnum' on input line 44.
 
-Package microtype Warning: Unable to apply patch `footnote' on input line 42.
+Package microtype Warning: Unable to apply patch `footnote' on input line 44.
 
-Package microtype Info: Applying patch `verbatim' on input line 42.
+Package microtype Info: Applying patch `verbatim' on input line 44.
 Package microtype Info: Generating PDF output.
 Package microtype Info: Character protrusion enabled (level 2).
 Package microtype Info: Using default protrusion set `alltext'.
 Package microtype Info: Automatic font expansion enabled (level 2),
 (microtype)             stretch: 20, shrink: 20, step: 1, non-selected.
 Package microtype Info: Using default expansion set `alltext-nott'.
-LaTeX Info: Redefining \showhyphens on input line 42.
+LaTeX Info: Redefining \showhyphens on input line 44.
 Package microtype Info: No adjustment of tracking.
 Package microtype Info: No adjustment of interword spacing.
 Package microtype Info: No adjustment of character kerning.
@@ -585,42 +585,42 @@ Package epstopdf-base Info: Redefining graphics rule for `.eps' on input line 4
 File: epstopdf-sys.cfg 2010/07/13 v1.3 Configuration of (r)epstopdf for TeX Liv
 e
 ))
-Package hyperref Info: Link coloring ON on input line 42.
+Package hyperref Info: Link coloring ON on input line 44.
 
 (./draft.out) (./draft.out)
 \@outlinefile=\write3
 \openout3 = `draft.out'.
 
 LaTeX Font Info:    Trying to load font information for OT1+lmr on input line 4
-4.
+6.
  (/usr/share/texmf/tex/latex/lm/ot1lmr.fd
 File: ot1lmr.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 )
 LaTeX Font Info:    Trying to load font information for OML+lmm on input line 4
-4.
+6.
 
 (/usr/share/texmf/tex/latex/lm/omllmm.fd
 File: omllmm.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 )
 LaTeX Font Info:    Trying to load font information for OMS+lmsy on input line 
-44.
+46.
 
 (/usr/share/texmf/tex/latex/lm/omslmsy.fd
 File: omslmsy.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 )
 LaTeX Font Info:    Trying to load font information for OMX+lmex on input line 
-44.
+46.
 
 (/usr/share/texmf/tex/latex/lm/omxlmex.fd
 File: omxlmex.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 )
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <12> on input line 44.
+(Font)              <12> on input line 46.
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <8> on input line 44.
+(Font)              <8> on input line 46.
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <6> on input line 44.
-LaTeX Font Info:    Trying to load font information for U+msa on input line 44.
+(Font)              <6> on input line 46.
+LaTeX Font Info:    Trying to load font information for U+msa on input line 46.
 
 
 (/usr/share/texlive/texmf-dist/tex/latex/amsfonts/umsa.fd
@@ -629,7 +629,7 @@ File: umsa.fd 2013/01/14 v3.01 AMS symbols A
 (/usr/share/texlive/texmf-dist/tex/latex/microtype/mt-msa.cfg
 File: mt-msa.cfg 2006/02/04 v1.1 microtype config. file: AMS symbols (a) (RS)
 )
-LaTeX Font Info:    Trying to load font information for U+msb on input line 44.
+LaTeX Font Info:    Trying to load font information for U+msb on input line 46.
 
 
 (/usr/share/texlive/texmf-dist/tex/latex/amsfonts/umsb.fd
@@ -639,11 +639,11 @@ File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 File: mt-msb.cfg 2005/06/01 v1.0 microtype config. file: AMS symbols (b) (RS)
 )
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <10> on input line 55.
+(Font)              <10> on input line 57.
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <7> on input line 55.
+(Font)              <7> on input line 57.
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <5> on input line 55.
+(Font)              <5> on input line 57.
  [1
 
 {/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map}{/usr/share/texmf/fonts/enc/
@@ -651,11 +651,11 @@ dvips/lm/lm-ec.enc}{/usr/share/texmf/fonts/enc/dvips/lm/lm-mathit.enc}{/usr/sha
 re/texmf/fonts/enc/dvips/lm/lm-rm.enc}{/usr/share/texmf/fonts/enc/dvips/lm/lm-m
 athsy.enc}]
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <10.95> on input line 93.
+(Font)              <10.95> on input line 95.
 
 [2]
 LaTeX Font Info:    Trying to load font information for T1+lmtt on input line 1
-59.
+65.
  (/usr/share/texmf/tex/latex/lm/t1lmtt.fd
 File: t1lmtt.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 )
@@ -665,14 +665,62 @@ Package microtype Info: Loading generic protrusion settings for font family
 (microtype)             See the microtype manual for details.
  [3]
 LaTeX Font Info:    Trying to load font information for TS1+lmr on input line 2
-35.
+41.
 
 (/usr/share/texmf/tex/latex/lm/ts1lmr.fd
 File: ts1lmr.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 ) [4{/usr/share/texmf/fonts/enc/dvips/lm/lm-mathex.enc}] [5{/usr/share/texmf/fo
-nts/enc/dvips/lm/lm-ts1.enc}] [6]
-[7] [8]
-Overfull \hbox (35.43793pt too wide) in paragraph at lines 465--466
+nts/enc/dvips/lm/lm-ts1.enc}]
+<../figures-progress/fig_data_scaling.pdf, id=282, 1076.8886pt x 296.97412pt>
+File: ../figures-progress/fig_data_scaling.pdf Graphic file (type pdf)
+<use ../figures-progress/fig_data_scaling.pdf>
+Package pdftex.def Info: ../figures-progress/fig_data_scaling.pdf  used on inpu
+t line 326.
+(pdftex.def)             Requested size: 469.75502pt x 129.54521pt.
+<../figures-progress/fig_capacity_scaling.pdf, id=284, 1077.21477pt x 296.97412
+pt>
+File: ../figures-progress/fig_capacity_scaling.pdf Graphic file (type pdf)
+<use ../figures-progress/fig_capacity_scaling.pdf>
+Package pdftex.def Info: ../figures-progress/fig_capacity_scaling.pdf  used on 
+input line 342.
+(pdftex.def)             Requested size: 469.75502pt x 129.50443pt.
+ [6 <../figures-progress/fig_data_scaling.pdf>]
+<../figures-progress/fig_comparative_data_scaling.pdf, id=362, 425.31737pt x 31
+6.40674pt>
+File: ../figures-progress/fig_comparative_data_scaling.pdf Graphic file (type p
+df)
+<use ../figures-progress/fig_comparative_data_scaling.pdf>
+Package pdftex.def Info: ../figures-progress/fig_comparative_data_scaling.pdf  
+used on input line 375.
+(pdftex.def)             Requested size: 328.82707pt x 244.62367pt.
+ [7 <../figures-progress/fig_capacity_scaling.pdf>] [8 <../figures-progress/fig
+_comparative_data_scaling.pdf>]
+<../figures-progress/fig_error_heatmap.pdf, id=495, 850.13232pt x 371.29904pt>
+File: ../figures-progress/fig_error_heatmap.pdf Graphic file (type pdf)
+<use ../figures-progress/fig_error_heatmap.pdf>
+Package pdftex.def Info: ../figures-progress/fig_error_heatmap.pdf  used on inp
+ut line 453.
+(pdftex.def)             Requested size: 469.75502pt x 205.16692pt.
+ [9]
+<../figures-progress/fig_exponent_comparison.pdf, id=506, 712.36139pt x 298.547
+26pt>
+File: ../figures-progress/fig_exponent_comparison.pdf Graphic file (type pdf)
+<use ../figures-progress/fig_exponent_comparison.pdf>
+Package pdftex.def Info: ../figures-progress/fig_exponent_comparison.pdf  used 
+on input line 462.
+(pdftex.def)             Requested size: 375.80544pt x 157.5004pt.
+
+[10 <../figures-progress/fig_error_heatmap.pdf> <../figures-progress/fig_expone
+nt_comparison.pdf>]
+<../figures-progress/fig_stability_summary.pdf, id=616, 714.92499pt x 296.97412
+pt>
+File: ../figures-progress/fig_stability_summary.pdf Graphic file (type pdf)
+<use ../figures-progress/fig_stability_summary.pdf>
+Package pdftex.def Info: ../figures-progress/fig_stability_summary.pdf  used on
+ input line 497.
+(pdftex.def)             Requested size: 469.75502pt x 195.13348pt.
+
+Overfull \hbox (35.43793pt too wide) in paragraph at lines 507--508
 \T1/lmr/m/n/10.95 (-20) We per-formed a ded-i-cated $\OML/lmm/m/it/10.95 ^^U[]$
  \T1/lmr/m/n/10.95 (-20) sweep for the midpoint-residual prior across $\OML/lmm
 /m/it/10.95 ^^U \OMS/lmsy/m/n/10.95 2 f\OT1/lmr/m/n/10.95 (-20) 0\OML/lmm/m/it/
@@ -682,32 +730,38 @@ Overfull \hbox (35.43793pt too wide) in paragraph at lines 465--466
 1\OMS/lmsy/m/n/10.95 g$
  []
 
-[9] [10] [11] [12] [13] (./draft.aux)
+[11 <../figures-progress/fig_stability_summary.pdf>]
+<../figures-progress/fig_lambda_midpoint.pdf, id=679, 786.77208pt x 333.59831pt
+>
+File: ../figures-progress/fig_lambda_midpoint.pdf Graphic file (type pdf)
+<use ../figures-progress/fig_lambda_midpoint.pdf>
+Package pdftex.def Info: ../figures-progress/fig_lambda_midpoint.pdf  used on i
+nput line 546.
+(pdftex.def)             Requested size: 469.75502pt x 199.18318pt.
+<../figures-progress/fig_lambda_conservation.pdf, id=680, 786.77208pt x 333.598
+31pt>
+File: ../figures-progress/fig_lambda_conservation.pdf Graphic file (type pdf)
+<use ../figures-progress/fig_lambda_conservation.pdf>
+Package pdftex.def Info: ../figures-progress/fig_lambda_conservation.pdf  used 
+on input line 554.
+(pdftex.def)             Requested size: 469.75502pt x 199.18318pt.
+ [12 <../figures-progress/fig_lambda_midpoint.pdf>] [13 <../figures-progress/fi
+g_lambda_conservation.pdf>] [14] [15] [16] [17] [18] [19] (./draft.aux)
  ***********
 LaTeX2e <2023-11-01> patch level 1
 L3 programming layer <2024-01-22>
  ***********
-
-
-LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
-
-
-Package rerunfilecheck Warning: File `draft.out' has changed.
-(rerunfilecheck)                Rerun to get outlines right
-(rerunfilecheck)                or use package `bookmark'.
-
-Package rerunfilecheck Info: Checksums for `draft.out':
-(rerunfilecheck)             Before: 2C32D78A370E1A7A5A7847F0452D4474;6943
-(rerunfilecheck)             After:  0E4F45ABC22C167AA596DBA11FB5452C;7021.
+Package rerunfilecheck Info: File `draft.out' has not changed.
+(rerunfilecheck)             Checksum: D14F0C9C0FBCE1914B5AD65F8BE2170F;7895.
  ) 
 Here is how much of TeX's memory you used:
- 15833 strings out of 476182
- 257803 string characters out of 5795594
- 1937975 words of memory out of 5000000
- 37266 multiletter control sequences out of 15000+600000
- 660970 words of font info for 225 fonts, out of 8000000 for 9000
+ 15964 strings out of 476182
+ 262182 string characters out of 5795594
+ 1936975 words of memory out of 5000000
+ 37356 multiletter control sequences out of 15000+600000
+ 661999 words of font info for 234 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
- 75i,11n,79p,1002b,587s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 75i,11n,79p,1002b,624s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/share/texmf/fonts/type1/public/lm/lmbx10.pfb></usr/share/texmf/fonts/ty
 pe1/public/lm/lmbx12.pfb></usr/share/texmf/fonts/type1/public/lm/lmex10.pfb></u
 sr/share/texmf/fonts/type1/public/lm/lmmi10.pfb></usr/share/texmf/fonts/type1/p
@@ -723,10 +777,10 @@ texmf/fonts/type1/public/lm/lmsy8.pfb></usr/share/texmf/fonts/type1/public/lm/l
 mtt10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/symbols/ms
 am10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/symbols/msb
 m10.pfb>
-Output written on draft.pdf (13 pages, 365938 bytes).
+Output written on draft.pdf (19 pages, 545554 bytes).
 PDF statistics:
- 441 PDF objects out of 1000 (max. 8388607)
- 377 compressed objects within 4 object streams
- 100 named destinations out of 1000 (max. 500000)
- 57161 words of extra memory for PDF output out of 61914 (max. 10000000)
+ 1012 PDF objects out of 1200 (max. 8388607)
+ 540 compressed objects within 6 object streams
+ 123 named destinations out of 1000 (max. 500000)
+ 57225 words of extra memory for PDF output out of 61914 (max. 10000000)
 
