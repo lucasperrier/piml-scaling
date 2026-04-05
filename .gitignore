@@ -25,7 +25,8 @@ artifacts/
 outputs/
 
 # Data
-data/
+/data/
+/data-*/
 
 # OS
 .DS_Store

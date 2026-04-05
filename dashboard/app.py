@@ -124,10 +124,10 @@ def _remote_gpu_stats() -> dict:
 
 @st.cache_data(ttl=8)
 def _remote_log_tail(n: int = 40) -> tuple[str, str]:
-    """Get the tail of the latest step21 log from the pod. Returns (filename, content)."""
+    """Get the tail of the latest log from the pod. Returns (filename, content)."""
     out = _ssh_cmd(
         f"cd {REMOTE_PROJECT} && "
-        f"f=$(ls -1t logs/step21_*.log logs/step21_full_*.log 2>/dev/null | head -n 1); "
+        f"f=$(ls -1t logs/master_*.log logs/step21_*.log logs/step21_full_*.log 2>/dev/null | head -n 1); "
         f'[ -n "$f" ] && echo "FILE:$f" && tail -n {n} "$f" || echo "FILE:none"',
         timeout=10,
     )
@@ -141,8 +141,8 @@ def _remote_log_tail(n: int = 40) -> tuple[str, str]:
 
 @st.cache_data(ttl=8)
 def _remote_process_check() -> str:
-    """Check if a sweep process is running on the pod."""
-    out = _ssh_cmd("ps -eo pid,etime,args | grep run_sweep | grep -v grep | head -n 3")
+    """Check if a sweep or master process is running on the pod."""
+    out = _ssh_cmd("ps -eo pid,etime,args | grep -E 'run_all_gpu|run_sweep|run_experiment' | grep -v grep | head -n 5")
     return out or "(no active sweep process)"
 
 
