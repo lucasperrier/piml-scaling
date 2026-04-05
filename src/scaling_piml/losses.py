@@ -173,6 +173,95 @@ def total_loss_composite(
     }
 
 
+# ---------------------------------------------------------------------------
+# Simpson's 1/3-rule ODE residual (4th-order, true quadrature)
+#
+# The model outputs (u_{T/2}, u_T) ∈ R^4 (same layout as composite).
+# Residual: r = u_T - u_0 - (T/6)[F(u_0) + 4F(u_{T/2}) + F(u_T)]
+# ---------------------------------------------------------------------------
+
+def simpson_residual(
+    *,
+    u0: torch.Tensor,
+    uT2_hat: torch.Tensor,
+    uT_hat: torch.Tensor,
+    T: float,
+    alpha: float,
+    beta: float,
+    delta: float,
+    gamma: float,
+) -> torch.Tensor:
+    """Simpson's 1/3-rule ODE residual (4th-order).
+
+    Shapes: u0, uT2_hat, uT_hat: (B, 2)
+    Returns: residual (B, 2)
+    """
+    kwargs = dict(alpha=alpha, beta=beta, delta=delta, gamma=gamma)
+
+    F0 = _lv_vector_field(u0, **kwargs)
+    F_mid = _lv_vector_field(uT2_hat, **kwargs)
+    F_T = _lv_vector_field(uT_hat, **kwargs)
+
+    return uT_hat - u0 - (T / 6.0) * (F0 + 4.0 * F_mid + F_T)
+
+
+def simpson_loss(
+    *,
+    u0: torch.Tensor,
+    uT2_hat: torch.Tensor,
+    uT_hat: torch.Tensor,
+    T: float,
+    alpha: float,
+    beta: float,
+    delta: float,
+    gamma: float,
+) -> torch.Tensor:
+    """Mean squared Simpson's 1/3-rule ODE residual loss."""
+    r = simpson_residual(
+        u0=u0, uT2_hat=uT2_hat, uT_hat=uT_hat,
+        T=T, alpha=alpha, beta=beta, delta=delta, gamma=gamma,
+    )
+    return torch.mean(torch.sum(r**2, dim=1))
+
+
+def total_loss_simpson(
+    *,
+    pred_full: torch.Tensor,
+    pred_target: torch.Tensor,
+    target: torch.Tensor,
+    u0: torch.Tensor,
+    uT2_hat_phys: torch.Tensor,
+    uT_hat_phys: torch.Tensor,
+    T: float,
+    alpha: float,
+    beta: float,
+    delta: float,
+    gamma: float,
+    lambda_phys: float,
+) -> tuple[torch.Tensor, dict[str, float]]:
+    """Total loss for the true Simpson's 1/3-rule model.
+
+    Same interface as total_loss_composite (4D output: u_{T/2}, u_T).
+    """
+    ld = mse_loss(pred_target, target)
+    lp = simpson_loss(
+        u0=u0,
+        uT2_hat=uT2_hat_phys,
+        uT_hat=uT_hat_phys,
+        T=T,
+        alpha=alpha,
+        beta=beta,
+        delta=delta,
+        gamma=gamma,
+    )
+    L = ld + float(lambda_phys) * lp
+    return L, {
+        "loss": float(L.detach().cpu()),
+        "data": float(ld.detach().cpu()),
+        "phys": float(lp.detach().cpu()),
+    }
+
+
 def total_loss(
     *,
     pred: torch.Tensor,
@@ -231,3 +320,119 @@ def total_loss_conservation(
         "data": float(ld.detach().cpu()),
         "phys": float(lp.detach().cpu()),
     }
+
+
+# ===========================================================================
+# Duffing oscillator losses
+# ===========================================================================
+
+def _duffing_vector_field(
+    u: torch.Tensor,
+    *,
+    alpha: float,
+    beta: float,
+) -> torch.Tensor:
+    """Evaluate the Duffing oscillator vector field F(u).
+
+    u: (B, 2).  System: dx/dt = y, dy/dt = -alpha*x - beta*x^3
+    Returns: (B, 2)
+    """
+    x = u[:, 0]
+    y = u[:, 1]
+    dx = y
+    dy = -alpha * x - beta * x**3
+    return torch.stack([dx, dy], dim=1)
+
+
+def _duffing_energy(
+    u: torch.Tensor,
+    *,
+    alpha: float,
+    beta: float,
+) -> torch.Tensor:
+    """Duffing energy: E = 1/2 y^2 + 1/2 alpha x^2 + 1/4 beta x^4.
+
+    u: (B, 2).  Returns: (B,)
+    """
+    x = u[:, 0]
+    y = u[:, 1]
+    return 0.5 * y**2 + 0.5 * alpha * x**2 + 0.25 * beta * x**4
+
+
+def duffing_midpoint_residual(
+    *,
+    u0: torch.Tensor,
+    uT_hat: torch.Tensor,
+    T: float,
+    alpha: float,
+    beta: float,
+) -> torch.Tensor:
+    """Implicit midpoint residual for the Duffing oscillator."""
+    mid = 0.5 * (uT_hat + u0)
+    f_mid = _duffing_vector_field(mid, alpha=alpha, beta=beta)
+    return uT_hat - u0 - T * f_mid
+
+
+def duffing_physics_loss(
+    *,
+    u0: torch.Tensor,
+    uT_hat: torch.Tensor,
+    T: float,
+    alpha: float,
+    beta: float,
+) -> torch.Tensor:
+    r = duffing_midpoint_residual(u0=u0, uT_hat=uT_hat, T=T, alpha=alpha, beta=beta)
+    return torch.mean(torch.sum(r**2, dim=1))
+
+
+def duffing_composite_midpoint_loss(
+    *,
+    u0: torch.Tensor,
+    uT2_hat: torch.Tensor,
+    uT_hat: torch.Tensor,
+    T: float,
+    alpha: float,
+    beta: float,
+) -> torch.Tensor:
+    """Composite 2-step midpoint ODE residual for Duffing."""
+    h = T / 2.0
+    kw = dict(alpha=alpha, beta=beta)
+
+    mid_a = 0.5 * (u0 + uT2_hat)
+    r_a = uT2_hat - u0 - h * _duffing_vector_field(mid_a, **kw)
+
+    mid_b = 0.5 * (uT2_hat + uT_hat)
+    r_b = uT_hat - uT2_hat - h * _duffing_vector_field(mid_b, **kw)
+
+    return torch.mean(torch.sum(r_a**2, dim=1)) + torch.mean(torch.sum(r_b**2, dim=1))
+
+
+def duffing_conservation_loss(
+    *,
+    u0: torch.Tensor,
+    uT_hat: torch.Tensor,
+    alpha: float,
+    beta: float,
+) -> torch.Tensor:
+    """Mean squared violation of the Duffing energy conservation."""
+    E0 = _duffing_energy(u0, alpha=alpha, beta=beta)
+    ET = _duffing_energy(uT_hat, alpha=alpha, beta=beta)
+    return torch.mean((ET - E0) ** 2)
+
+
+def duffing_simpson_loss(
+    *,
+    u0: torch.Tensor,
+    uT2_hat: torch.Tensor,
+    uT_hat: torch.Tensor,
+    T: float,
+    alpha: float,
+    beta: float,
+) -> torch.Tensor:
+    """Simpson's 1/3-rule ODE residual loss for the Duffing oscillator (4th-order)."""
+    kw = dict(alpha=alpha, beta=beta)
+    F0 = _duffing_vector_field(u0, **kw)
+    F_mid = _duffing_vector_field(uT2_hat, **kw)
+    F_T = _duffing_vector_field(uT_hat, **kw)
+    r = uT_hat - u0 - (T / 6.0) * (F0 + 4.0 * F_mid + F_T)
+    return torch.mean(torch.sum(r**2, dim=1))

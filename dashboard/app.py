@@ -32,7 +32,160 @@ MODELS = ["plain", "piml", "piml-simpson"]
 TARGET_PER_MODEL = 693
 TARGET_TOTAL = TARGET_PER_MODEL * len(MODELS)
 
+# Remote pod settings (SSH alias from ~/.ssh/config)
+REMOTE_HOST = _os.environ.get("DASHBOARD_REMOTE_HOST", "runpod")
+REMOTE_PROJECT = _os.environ.get("DASHBOARD_REMOTE_PROJECT", "/workspace/projects/piml-scaling")
+REMOTE_RUNS = f"{REMOTE_PROJECT}/{_runs_name}"
+
 st.set_page_config(page_title="Scaling-PIML Dashboard", layout="wide")
+
+
+# ---------------------------------------------------------------------------
+# SSH helpers — poll the pod from your local machine
+# ---------------------------------------------------------------------------
+
+def _ssh_cmd(cmd: str, timeout: int = 10) -> str | None:
+    """Run a command on the remote pod via SSH. Returns stdout or None on failure."""
+    try:
+        result = subprocess.run(
+            ["ssh", "-o", "ConnectTimeout=5", "-o", "BatchMode=yes", REMOTE_HOST, cmd],
+            capture_output=True, text=True, timeout=timeout,
+        )
+        if result.returncode == 0:
+            return result.stdout.strip()
+    except Exception:
+        pass
+    return None
+
+
+@st.cache_data(ttl=8)
+def _remote_model_counts() -> dict[str, int]:
+    """Get per-model completed run counts from the pod."""
+    out = _ssh_cmd(
+        f"cd {REMOTE_PROJECT} && "
+        f"for m in plain piml piml-simpson; do "
+        f"  c=$(find {REMOTE_RUNS}/model=$m -name metrics.json 2>/dev/null | wc -l); "
+        f'  echo "$m $c"; '
+        f"done"
+    )
+    counts: dict[str, int] = {}
+    if out:
+        for line in out.splitlines():
+            parts = line.split()
+            if len(parts) == 2:
+                counts[parts[0]] = int(parts[1])
+    return counts
+
+
+@st.cache_data(ttl=8)
+def _remote_capacity_grid() -> pd.DataFrame:
+    """Get (model, capacity, completed) grid from the pod."""
+    out = _ssh_cmd(
+        f"cd {REMOTE_PROJECT} && "
+        f"for md in $(ls -d {REMOTE_RUNS}/model=* 2>/dev/null); do "
+        f"  m=$(basename $md | cut -d= -f2); "
+        f"  for cd_ in $(ls -d $md/capacity=* 2>/dev/null); do "
+        f"    cap=$(basename $cd_ | cut -d= -f2); "
+        f"    n=$(find $cd_ -name metrics.json | wc -l); "
+        f'    echo "$m $cap $n"; '
+        f"  done; "
+        f"done",
+        timeout=15,
+    )
+    rows = []
+    if out:
+        for line in out.splitlines():
+            parts = line.split()
+            if len(parts) == 3:
+                rows.append({"model": parts[0], "capacity": parts[1], "completed": int(parts[2])})
+    return pd.DataFrame(rows) if rows else pd.DataFrame(columns=["model", "capacity", "completed"])
+
+
+@st.cache_data(ttl=8)
+def _remote_gpu_stats() -> dict:
+    """Query nvidia-smi on the pod."""
+    out = _ssh_cmd(
+        "nvidia-smi --query-gpu=name,utilization.gpu,memory.used,memory.total,temperature.gpu,power.draw "
+        "--format=csv,noheader,nounits"
+    )
+    if out:
+        parts = [p.strip() for p in out.split(",")]
+        if len(parts) >= 6:
+            return {
+                "name": parts[0],
+                "util_pct": float(parts[1]),
+                "mem_used_mb": float(parts[2]),
+                "mem_total_mb": float(parts[3]),
+                "temp_c": float(parts[4]),
+                "power_w": float(parts[5]),
+            }
+    return {}
+
+
+@st.cache_data(ttl=8)
+def _remote_log_tail(n: int = 40) -> tuple[str, str]:
+    """Get the tail of the latest step21 log from the pod. Returns (filename, content)."""
+    out = _ssh_cmd(
+        f"cd {REMOTE_PROJECT} && "
+        f"f=$(ls -1t logs/step21_*.log logs/step21_full_*.log 2>/dev/null | head -n 1); "
+        f'[ -n "$f" ] && echo "FILE:$f" && tail -n {n} "$f" || echo "FILE:none"',
+        timeout=10,
+    )
+    if out:
+        lines = out.splitlines()
+        fname = lines[0].replace("FILE:", "") if lines else "none"
+        content = "\n".join(lines[1:]) if len(lines) > 1 else "(empty)"
+        return fname, content
+    return "unreachable", "(SSH connection failed)"
+
+
+@st.cache_data(ttl=8)
+def _remote_process_check() -> str:
+    """Check if a sweep process is running on the pod."""
+    out = _ssh_cmd("ps -eo pid,etime,args | grep run_sweep | grep -v grep | head -n 3")
+    return out or "(no active sweep process)"
+
+
+@st.cache_data(ttl=30)
+def _remote_run_timestamps_summary() -> dict:
+    """Get timestamp stats from the pod for ETA estimation."""
+    out = _ssh_cmd(
+        f"cd {REMOTE_PROJECT} && "
+        f'.venv/bin/python -c "'
+        f"import os, json; "
+        f"ts = sorted(os.path.getmtime(os.path.join(r,f)) "
+        f"  for r,_,fs in os.walk('{REMOTE_RUNS}') for f in fs if f=='metrics.json'); "
+        f"print(json.dumps({{'count':len(ts),'first':ts[0] if ts else 0,'last':ts[-1] if ts else 0,"
+        f"'recent_20':ts[-20:] if len(ts)>=20 else ts}}))"
+        f'"',
+        timeout=15,
+    )
+    if out:
+        try:
+            return json.loads(out)
+        except Exception:
+            pass
+    return {}
+
+
+def _estimate_eta_from_summary(completed: int, total: int, summary: dict) -> str:
+    remaining = total - completed
+    if remaining <= 0:
+        return "Done!"
+    recent = summary.get("recent_20", [])
+    if len(recent) < 3:
+        return "Collecting data..."
+    elapsed = recent[-1] - recent[0]
+    n_in_window = len(recent) - 1
+    if elapsed <= 0 or n_in_window <= 0:
+        return "Estimating..."
+    rate = n_in_window / elapsed
+    eta_s = remaining / rate
+    if eta_s < 60:
+        return f"~{eta_s:.0f}s"
+    if eta_s < 3600:
+        return f"~{eta_s / 60:.0f}m"
+    return f"~{eta_s / 3600:.1f}h"
 
 
 def _safe_read_csv(path: Path) -> pd.DataFrame:
@@ -193,17 +346,17 @@ with st.sidebar:
 
 # ===== LIVE MONITOR TAB =====
 if dashboard_mode == "Live Monitor":
-    model_counts = _per_model_counts()
+    model_counts = _remote_model_counts()
     completed_runs = sum(model_counts.values())
-    timestamps = _run_timestamps()
-    eta = _estimate_eta(completed_runs, TARGET_TOTAL, timestamps)
+    ts_summary = _remote_run_timestamps_summary()
+    eta = _estimate_eta_from_summary(completed_runs, TARGET_TOTAL, ts_summary)
 
     # ---- Top KPI row ----
     k1, k2, k3, k4 = st.columns(4)
     k1.metric("Total Progress", f"{completed_runs} / {TARGET_TOTAL}")
     k2.metric("Completion", f"{100 * completed_runs / TARGET_TOTAL:.1f}%")
     k3.metric("ETA", eta)
-    gpu = _gpu_stats()
+    gpu = _remote_gpu_stats()
     k4.metric("GPU", f"{gpu.get('name', 'N/A')}")
 
     st.progress(min(completed_runs / TARGET_TOTAL, 1.0))
@@ -217,7 +370,7 @@ if dashboard_mode == "Live Monitor":
         g3.metric("Temperature", f"{gpu['temp_c']:.0f} °C")
         g4.metric("Power", f"{gpu['power_w']:.0f} W")
     else:
-        st.info("GPU stats unavailable (nvidia-smi not found — run dashboard on the pod for GPU metrics).")
+        st.warning("GPU stats unavailable — check pod connectivity.")
 
     # ---- Per-model progress bars ----
     st.subheader("Per-Model Progress")
@@ -228,9 +381,13 @@ if dashboard_mode == "Live Monitor":
         cols[i].metric(m, f"{c} / {TARGET_PER_MODEL}")
         cols[i].progress(min(pct, 1.0))
 
+    # ---- Process status ----
+    st.subheader("Active Process")
+    st.code(_remote_process_check(), language="text")
+
     # ---- Capacity breakdown heatmap ----
     st.subheader("Progress Grid (model × capacity)")
-    cap_df = _model_capacity_progress()
+    cap_df = _remote_capacity_grid()
     if not cap_df.empty:
         pivot = cap_df.pivot_table(index="model", columns="capacity", values="completed", fill_value=0)
         fig_grid = go.Figure(data=go.Heatmap(
@@ -251,33 +408,22 @@ if dashboard_mode == "Live Monitor":
         st.plotly_chart(fig_grid, use_container_width=True)
 
     # ---- Completion timeline ----
-    if len(timestamps) > 2:
-        st.subheader("Completion Timeline")
-        ts_df = pd.DataFrame({
-            "time": pd.to_datetime(timestamps, unit="s"),
-            "cumulative": range(1, len(timestamps) + 1),
-        })
-        fig_ts = px.line(ts_df, x="time", y="cumulative", title="Cumulative completed runs over time")
-        fig_ts.add_hline(y=TARGET_TOTAL, line_dash="dash", line_color="red", annotation_text=f"target={TARGET_TOTAL}")
-        st.plotly_chart(fig_ts, use_container_width=True)
-
-    # ---- Recent throughput ----
-    if len(timestamps) >= 5:
-        recent = timestamps[-min(50, len(timestamps)):]
-        diffs = [recent[i + 1] - recent[i] for i in range(len(recent) - 1)]
+    recent_ts = ts_summary.get("recent_20", [])
+    if len(recent_ts) >= 3:
+        st.subheader("Recent Throughput")
+        diffs = [recent_ts[i + 1] - recent_ts[i] for i in range(len(recent_ts) - 1)]
         avg_sec = sum(diffs) / len(diffs) if diffs else 0
-        st.metric("Avg seconds per run (recent)", f"{avg_sec:.1f}s" if avg_sec else "N/A")
+        r1, r2 = st.columns(2)
+        r1.metric("Avg seconds/run (recent)", f"{avg_sec:.1f}s")
+        r2.metric("Runs/hour (recent)", f"{3600 / avg_sec:.0f}" if avg_sec > 0 else "N/A")
 
     # ---- Log tail ----
     st.subheader("Live Log")
-    log_path = _latest_log_path()
-    if log_path:
-        st.caption(f"`{log_path.name}`")
-        st.code(_tail_log(log_path, n=40), language="text")
-    else:
-        st.info("No log files found.")
+    log_name, log_content = _remote_log_tail(n=40)
+    st.caption(f"`{log_name}`")
+    st.code(log_content, language="text")
 
-    st.caption(f"Last refresh: {datetime.now(timezone.utc).strftime('%H:%M:%S UTC')}")
+    st.caption(f"Last refresh: {datetime.now(timezone.utc).strftime('%H:%M:%S UTC')}  •  Polling: `{REMOTE_HOST}`")
     st.stop()
 
 aggregate_df, grouped_df, fits = _load_data()

@@ -25,14 +25,16 @@ MODEL_COLORS = {
     "piml": "#d62728",
     "piml-simpson": "#2ca02c",
     "piml-conservation": "#ff7f0e",
+    "piml-simpson-true": "#9467bd",
 }
 MODEL_LABELS = {
     "plain": "Plain MLP",
     "piml": "PIML (midpoint)",
     "piml-simpson": "PIML (composite)",
     "piml-conservation": "PIML (conservation)",
+    "piml-simpson-true": "PIML (Simpson 4th-order)",
 }
-MARKERS = {"plain": "o", "piml": "s", "piml-simpson": "D", "piml-conservation": "^"}
+MARKERS = {"plain": "o", "piml": "s", "piml-simpson": "D", "piml-conservation": "^", "piml-simpson-true": "P"}
 
 
 def _setup_style() -> None:

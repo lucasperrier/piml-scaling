@@ -5,9 +5,12 @@ from dataclasses import dataclass, field
 
 @dataclass
 class SystemConfig:
-    # Lotka–Volterra parameters
+    # System name: "lotka-volterra" or "duffing"
+    name: str = "lotka-volterra"
+    # Shared parameters (alpha, beta used by both systems)
     alpha: float = 1.5
     beta: float = 1.0
+    # Lotka–Volterra only
     delta: float = 1.0
     gamma: float = 3.0
 
@@ -60,6 +63,15 @@ class TrainConfig:
     lambda_phys: float = 0.1
 
     train_seeds: list[int] = field(default_factory=lambda: [101, 202, 303])
+
+    # Rescue study options (Section 24)
+    warm_start: str = ""  # Path to a plain-model checkpoint to initialize from
+    grad_clip: float = 0.0  # Max gradient norm (0 = disabled)
+    lambda_schedule_epochs: int = 0  # Linear ramp-up of lambda_phys over this many epochs (0 = disabled)
+    two_stage_epochs: int = 0  # Data-only phase before adding physics loss (0 = disabled)
+
+    # Gradient decomposition logging (Section 28)
+    log_grad_decomposition: bool = False  # Log grad_norm_data and grad_norm_phys separately
 
 
 @dataclass

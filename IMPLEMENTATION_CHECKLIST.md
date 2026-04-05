@@ -1,7 +1,7 @@
 
 # Implementation Checklist
 
-Status is synced to the current repository state as of 2026-04-04. Checked items are implemented or directly validated in the repo; unchecked items are still missing, not automated yet, or not fully verified.
+Status is synced to the current repository state as of 2026-04-05. Checked items are implemented or directly validated in the repo; unchecked items are still missing, not automated yet, or not fully verified.
 
 ---
 
@@ -74,7 +74,7 @@ These sections document the initial pilot study. All checked items are implement
 - [x] Implement relative L2 metric (per-sample, physical space)
 - [x] Implement MSE metric
 - [x] Evaluate on test set
-- [ ] Save test predictions optionally
+- [x] Save test predictions optionally
 - [x] Flag diverged / NaN runs
 
 ### 9. CLI / scripts
@@ -86,11 +86,15 @@ These sections document the initial pilot study. All checked items are implement
 - [x] Script to run lambda sweep (`scripts/run_lambda_sweep.py`, supports `--model piml|piml-conservation`)
 - [x] Script to analyze lambda sweep (`scripts/analyze_lambda_sweep.py`)
 - [x] Script to diagnose physics loss (`scripts/diagnose_physics.py`)
-- [ ] Script to generate figures (`scripts/generate_figures.py` — exists but needs updates)
+- [x] Script to validate scaling ansatzes (`scripts/validate_scaling_fits.py`)
+- [x] Script to run horizon sweep (`scripts/run_horizon_sweep.py`)
+- [x] Script to run rescue sweep (`scripts/run_rescue_sweep.py`)
+- [x] Script to generate figures (`scripts/generate_figures.py` — complete with all 6 paper figures)
+- [x] Script to plot gradient dynamics (`scripts/plot_gradient_dynamics.py`)
 
 ### 10. Sanity checks
 - [x] Single-run convergence test
-- [ ] Tiny-set overfit test with `D=32`
+- [x] Tiny-set overfit test with `D=32`
 - [x] Pilot monotonicity check for error vs `D`
 - [x] Pilot monotonicity check for error vs `N`
 - [x] Check scale of physics loss vs data loss (midpoint: ratio ~1.2× at init)
@@ -146,25 +150,28 @@ These sections document the initial pilot study. All checked items are implement
 - [x] Oscillation period: ~3.1–3.5 (T/period ≈ 0.29–0.34)
 
 ### 17. Figures
-- [ ] Task setup schematic
-- [ ] Capacity scaling figure
-- [ ] Data scaling figure
-- [ ] 2D error heatmap / contour
-- [ ] Exponent comparison with CI
-- [ ] Stability summary figure
+- [x] Task setup schematic
+- [x] Capacity scaling figure
+- [x] Data scaling figure
+- [x] 2D error heatmap / contour
+- [x] Exponent comparison with CI
+- [x] Stability summary figure
 
 ### 18. Paper draft
 - [x] Created `paper/draft.tex` (compiles cleanly)
 - [x] Plain and midpoint results filled in
-- [ ] Conservation results still pending (marked with `\pending{}`)
-- [ ] Figures still placeholder (marked with `\status{}`)
+- [x] Composite (simpson) results filled in
+- [x] Conservation results described (bimodal failure, lambda sweep)
+- [x] New Section 6.7: ansatz comparison with BIC table, CV table, interpretation
+- [x] Abstract, contributions, conclusion, discussion, limitations updated with ansatz results
+- [x] Figures generated from data (`scripts/generate_figures.py` produces all 6 paper figures)
 
 ### 19. Final validation
-- [ ] Confirm figures regenerate from scripts only
+- [x] Confirm figures regenerate from scripts only
 - [x] Confirm all configs are saved per run
 - [x] Confirm no notebook-only results are required
-- [ ] Confirm README matches actual implementation
-- [ ] Confirm minimal success criterion is met
+- [x] Confirm README matches actual implementation
+- [x] Confirm minimal success criterion is met
 
 ### 20. Minimal success criterion (Phase 1)
 - [x] Two clean scaling plots exist (plain + midpoint, data in `runs-progress/`)
@@ -187,16 +194,16 @@ Execution order matches experimental dependency, not section numbering.
 **Questions answered**: (2) statistical stability of exponent/floor estimates; (3) does reducing prior bias move α, β, E∞ as predicted?
 
 #### 21a. Infrastructure
-- [ ] Add intermediate capacities to `CAPACITY_GRID` in `models/mlp.py`: `small-med [96, 96]` between small and medium, `med-large [192, 192]` between medium and large
-- [ ] Add intermediate dataset sizes to `configs/default.yaml`: extend `dataset_sizes` to include `[48, 64, 96, 128, 256, 384, 512, 1024, 2048, 4096, 8192]` (add 48, 96, 384 for low-to-mid densification)
-- [ ] Verify nested subset generation works for new D values (subsets must remain nested slices of the same train pool)
-- [ ] Regenerate `data/` with extended `dataset_sizes` if `train_subsets.json` doesn't already cover the new sizes
+- [x] Add intermediate capacities to `CAPACITY_GRID` in `models/mlp.py`: `small-med [96, 96]` between small and medium, `med-large [192, 192]` between medium and large
+- [x] Add intermediate dataset sizes to `configs/default.yaml`: extend `dataset_sizes` to include `[48, 64, 96, 128, 256, 384, 512, 1024, 2048, 4096, 8192]` (add 48, 96, 384 for low-to-mid densification)
+- [x] Verify nested subset generation works for new D values (subsets must remain nested slices of the same train pool)
+- [x] Regenerate `data/` with extended `dataset_sizes` if `train_subsets.json` doesn't already cover the new sizes
 
-#### 21b. Runs
-- [ ] Run dense sweep for `plain`: 7 capacities × 11 dataset sizes × 3 data seeds × 3 train seeds = **693 runs** → `runs-dense/model=plain/`
-- [ ] Run dense sweep for `piml` (midpoint): same grid = **693 runs** → `runs-dense/model=piml/`
-- [ ] Run dense sweep for `piml-simpson` (composite): same grid = **693 runs** → `runs-dense/model=piml-simpson/`
-- [ ] Total: ~2,079 runs
+#### 21b. Runs (IN PROGRESS — running on Runpod GPU pod)
+- [ ] Run dense sweep for `plain`: 7 capacities × 11 dataset sizes × 3 data seeds × 3 train seeds = **693 runs** → `runs-dense/model=plain/` — **184/693 completed**
+- [ ] Run dense sweep for `piml` (midpoint): same grid = **693 runs** → `runs-dense/model=piml/` — **92/693 completed** (from prior partial run)
+- [ ] Run dense sweep for `piml-simpson` (composite): same grid = **693 runs** → `runs-dense/model=piml-simpson/` — **77/693 completed** (from prior partial run)
+- [ ] Total: ~2,079 runs — **353/2,079 completed (~17%)**
 
 #### 21c. Analysis
 - [ ] Aggregate all three models into `runs-dense/grouped_metrics.csv`
@@ -212,9 +219,9 @@ Execution order matches experimental dependency, not section numbering.
 **Questions answered**: (3) causal intervention — increasing T should move E∞ and exponents predictably.
 
 #### 22a. Infrastructure
-- [ ] Add `--horizon` CLI argument to `run_experiment.py` and `run_sweep.py` to override `data.T` from config
-- [ ] Create `scripts/run_horizon_sweep.py` that iterates over horizons and calls sweep logic for each
-- [ ] Ensure `generate_datasets.py` accepts `--horizon` to generate data at different T values
+- [x] Add `--horizon` CLI argument to `run_experiment.py` and `run_sweep.py` to override `data.T` from config
+- [x] Create `scripts/run_horizon_sweep.py` that iterates over horizons and calls sweep logic for each
+- [x] Ensure `generate_datasets.py` accepts `--horizon` to generate data at different T values
 - [ ] Generate datasets at T ∈ {0.5, 1.0, 2.0} for all 3 data seeds → `data-horizon-T=0.5/`, `data-horizon-T=2.0/` (T=1.0 already exists in `data/`)
 - [ ] Run `diagnose_physics.py` at each horizon to measure ground-truth midpoint residual and composite residual
 
@@ -237,31 +244,32 @@ Execution order matches experimental dependency, not section numbering.
 **Questions answered**: (2) fit stability across ansatzes; (4) does the ansatz fail interpretably?
 
 #### 23a. Infrastructure — alternative ansatzes
-- [ ] Implement in `src/scaling_piml/analysis/scaling.py` (or new file `analysis/ansatz_comparison.py`):
+- [x] Implement in `src/scaling_piml/analysis/ansatz_comparison.py`:
   - **Ansatz A (current)**: E = E∞ + a·N^{-α} + b·D^{-β} (additive, separable, with floor)
   - **Ansatz B (no-floor power law)**: E = a·N^{-α} + b·D^{-β} (E∞ fixed to 0)
   - **Ansatz C (multiplicative separable)**: E = c · N^{-α} · D^{-β}
   - **Ansatz D (additive with interaction)**: E = E∞ + a·N^{-α} + b·D^{-β} + d·N^{-α}·D^{-β}
-  - **Ansatz E (nonparametric baseline)**: 2D thin-plate spline or Gaussian-process fit on log(N) × log(D) → log(E)
-- [ ] For each ansatz, implement: fit function, bootstrap CI, residual diagnostics
-- [ ] Implement model comparison metrics: AIC/BIC for parametric ansatzes, leave-one-out cross-validation error for all
+  - **Ansatz E (nonparametric baseline)**: 2D thin-plate spline (RBFInterpolator) on log(N) × log(D) → log(E)
+- [x] For each ansatz, implement: fit function, bootstrap CI, residual diagnostics
+- [x] Implement model comparison metrics: AIC/BIC for parametric ansatzes, leave-one-out cross-validation error for all
 
 #### 23b. Infrastructure — held-out fit prediction
-- [ ] Create `scripts/validate_scaling_fits.py` that:
+- [x] Create `scripts/validate_scaling_fits.py` that:
   - Takes a `grouped_metrics.csv` and an ansatz name
   - Performs leave-one-column-out (hold out one D) and leave-one-row-out (hold out one N)
   - Fits on the remaining grid cells
   - Reports prediction error on held-out cells
   - Repeats for all ansatzes
-- [ ] Also implement leave-one-corner-out: hold out the largest (N, D) cell and predict from the rest (extrapolation test)
+- [x] Also implement leave-one-corner-out: hold out the largest (N, D) cell and predict from the rest (extrapolation test)
 
 #### 23c. Analysis
-- [ ] Run ansatz comparison on Phase 1 data (`runs-progress/grouped_metrics.csv`) for all models
+- [x] Run ansatz comparison on Phase 1 data (`runs-progress/grouped_metrics.csv`) for all models → `runs-progress/ansatz_comparison/`
+- [x] Run ansatz comparison on combined data (`runs-combined/grouped_metrics.csv`, 120 rows, 3 models) → `runs-combined/ansatz_comparison/`
 - [ ] Run ansatz comparison on dense sweep data (section 21) once available
-- [ ] Report AIC/BIC ranking per model
-- [ ] Report held-out prediction error per ansatz per model
-- [ ] Identify whether Ansatz A (current) wins or is dominated, and under what conditions
-- [ ] Check whether interacted or nonparametric ansatzes reveal structure missed by the additive form
+- [x] Report AIC/BIC ranking per model — E > D > others consistently
+- [x] Report held-out prediction error per ansatz per model — Ansatz D best among parametric
+- [x] Identify whether Ansatz A (current) wins or is dominated — Ansatz D (interaction) dominates A; Ansatz E (nonparametric) best overall
+- [x] Check whether interacted or nonparametric ansatzes reveal structure missed by the additive form — interaction term d significant (d≈0.52 piml, d≈7.4 plain, d≈13.1 piml-simpson)
 
 ### 24. Optimization rescue study for conservation prior
 
@@ -270,11 +278,13 @@ Execution order matches experimental dependency, not section numbering.
 **Questions answered**: (3) causal intervention — if targeted optimizer changes eliminate bimodality, the interpretation changes fundamentally.
 
 #### 24a. Infrastructure
-- [ ] Add `--warm-start` option to `run_experiment.py`: load a trained plain-model checkpoint as initialization before training with conservation loss
-- [ ] Add `--grad-clip` option to `run_experiment.py`: apply gradient clipping (e.g., max_norm ∈ {1.0, 5.0})
-- [ ] Add `--lambda-schedule` option to `run_experiment.py`: support linear ramp-up of λ_phys over the first K epochs (e.g., K = 50)
-- [ ] Add `--two-stage` option: train phase 1 with data-only loss for M epochs, then add conservation loss for remaining epochs
-- [ ] Create `scripts/run_rescue_sweep.py` that runs all rescue variants on the configurations where bimodality is strongest (large capacity, moderate-to-high λ)
+- [x] Add `--warm-start` option to `run_experiment.py`: load a trained plain-model checkpoint as initialization before training with conservation loss
+- [x] Add `--grad-clip` option to `run_experiment.py`: apply gradient clipping (e.g., max_norm ∈ {1.0, 5.0})
+- [x] Add `--lambda-schedule` option to `run_experiment.py`: support linear ramp-up of λ_phys over the first K epochs (e.g., K = 50)
+- [x] Add `--two-stage` option: train phase 1 with data-only loss for M epochs, then add conservation loss for remaining epochs
+- [x] Create `scripts/run_rescue_sweep.py` that runs all rescue variants on the configurations where bimodality is strongest (large capacity, moderate-to-high λ)
+- [x] Add `warm_start`, `grad_clip`, `lambda_schedule_epochs`, `two_stage_epochs` to `TrainConfig`
+- [x] Implement warm-start loading (compatible-key matching), effective_lambda computation (two-stage + ramp-up), gradient clipping in `train.py`
 
 #### 24b. Identify target configurations
 - [ ] From conservation λ sweep results (`runs-conservation-lambda-sweep/`), identify the (capacity, D, λ) triples with highest bimodality rate (e.g., large model, λ ≥ 0.01)
@@ -296,79 +306,62 @@ Execution order matches experimental dependency, not section numbering.
 - [ ] If bimodality persists across all variants → interpretation: surface corruption from weak exact prior
 - [ ] Report rescue success rate table
 
-### 25. Cross-system replication: Van der Pol oscillator
+### 25. Simpson's-rule prior (4th-order discretization)
 
-**Goal**: Test whether the scaling signatures (floor from biased prior, steepening from reduced-bias prior, bimodality from exact-but-weak prior) replicate on a smooth non-chaotic nonlinear oscillator with different geometry.
+**Goal**: Add a true Simpson's 1/3-rule physics loss (4th-order) alongside the existing single-step midpoint (2nd-order) and composite midpoint (two-step, 2nd-order). If the ground-truth residual decreases further, this turns the two-point comparison (midpoint → composite) into a three-point dose–response on discretization order: single-step → composite 2-step → Simpson, with progressively lower floors and better scaling recovery.
+
+**Questions answered**: (3) does further reducing discretization bias continue to improve scaling? (2) is this a monotone relationship?
+
+#### 25a. Infrastructure
+- [x] Implement `simpson_residual()` in `src/scaling_piml/losses.py`: Simpson's 1/3 rule on $[0, T]$ using 3 evaluations of $F$ at $t=0$, $t=T/2$, $t=T$. The network predicts $(\hat{\bm{x}}_{T/2}, \hat{\bm{x}}_T) \in \mathbb{R}^4$ (same output layout as composite). Residual: $r = \hat{\bm{x}}_T - \bm{x}_0 - \frac{T}{6}[F(\bm{x}_0) + 4F(\hat{\bm{x}}_{T/2}) + F(\hat{\bm{x}}_T)]$
+- [x] Implement `total_loss_simpson()` wrapping data + λ · Simpson residual
+- [x] Add `physics_prior="simpson-true"` path in `train.py` (keeping `"simpson"` as the existing composite midpoint alias for backward compatibility)
+- [ ] Verify Simpson ground-truth residual with `diagnose_physics.py`: expect ≪ composite midpoint (0.006), because Simpson is 4th-order vs midpoint's 2nd-order
+
+#### 25b. Runs
+- [ ] Run dense sweep for `piml-simpson-true`: 7 capacities × 11 dataset sizes × 3 data seeds × 3 train seeds = **693 runs** → `runs-dense/model=piml-simpson-true/`
+- [ ] Alternatively, run on the standard grid (5 × 8 × 9 = 360 runs) if dense sweep is too expensive
+
+#### 25c. Analysis
+- [ ] Fit scaling surface and compare to plain, midpoint, composite
+- [ ] Tabulate ground-truth residual: midpoint (0.151) → composite (0.006) → Simpson (???)
+- [ ] Tabulate (E∞, α, β) for all four physics variants
+- [ ] If Simpson further lowers E∞ and recovers/steepens exponents → strong dose–response evidence
+- [ ] If Simpson matches composite → diminishing returns, suggesting the composite already saturates what soft-constraint regularization can achieve
+
+### 26. Cross-system replication: Duffing oscillator
+
+**Goal**: Test whether the scaling taxonomy (floor-raising, scaling recovery, surface corruption) replicates on a second ODE system. The unforced undamped Duffing oscillator is chosen because (a) it is a 2D Hamiltonian system with an exact energy invariant $E = \frac{1}{2}\dot{x}^2 + \frac{1}{2}\alpha x^2 + \frac{1}{4}\beta x^4$, directly analogous to the Lotka–Volterra conservation law, and (b) it has qualitatively different nonlinearity (polynomial potential vs predator–prey interaction). This is the single highest-impact experiment for closing Limitation 1 ("single dynamical system").
 
 **Questions answered**: (1) does the signature replicate on a qualitatively different system?
 
-#### 25a. System implementation
-- [ ] Implement Van der Pol RHS in `src/scaling_piml/systems/van_der_pol.py`:
-  - ẋ = y, ẏ = μ(1 − x²)y − x
-  - Default parameter: μ = 1.0 (weakly nonlinear regime)
-- [ ] Implement Van der Pol midpoint physics loss in `src/scaling_piml/losses.py` (or `losses_vdp.py`): same midpoint-rule structure, using Van der Pol RHS
-- [ ] Implement Van der Pol composite (2-step midpoint) physics loss
-- [ ] Identify an appropriate physics prior for the "exact-but-weak" role:
-  - Van der Pol has no polynomial first integral in general, so use energy-related bound or known asymptotic invariant for the limit cycle
-  - Alternatively, use the dissipation-rate constraint: d/dt[½(x² + y²)] = μ(1 − x²)y² (known exactly)
-  - Choose whichever gives a nontrivial scalar constraint analogous to the conservation law
-- [ ] Add `--system vdp` support to `run_experiment.py`, `run_sweep.py`, and `generate_datasets.py`
-- [ ] Create `configs/vdp.yaml` with appropriate system parameters, initial condition ranges, horizon, and solver settings
-
-#### 25b. Data generation and validation
-- [ ] Choose initial condition domain (e.g., x₀ ∈ [−2, 2], y₀ ∈ [−2, 2]) and horizon T
-- [ ] Choose T such that the flow map is still diffeomorphic (T < period or well below transient timescale)
-- [ ] Generate datasets for 3 data seeds → `data-vdp/data_seed={11,22,33}/`
-- [ ] Validate solver accuracy at chosen T
-- [ ] Measure ground-truth midpoint residual at chosen T
-- [ ] Measure ground-truth composite residual at chosen T
-- [ ] Verify dataset properties: injectivity, Lipschitz bound, no degeneracies
-
-#### 25c. Runs
-- [ ] Run full sweep: plain + midpoint + composite + exact-prior (if applicable) × 5 capacities × 8 dataset sizes × 3 data seeds × 3 train seeds
-- [ ] ~3–4 models × 360 = **1,080–1,440 runs** → `runs-vdp/`
-
-#### 25d. Analysis
-- [ ] Fit scaling surfaces for each model variant
-- [ ] Compare qualitative pattern: does midpoint raise E∞? Does composite steepen exponents? Does the exact prior produce bimodality?
-- [ ] Tabulate (E∞, α, β) side-by-side with Lotka–Volterra results
-- [ ] If signatures replicate → strong evidence that taxonomy is tied to prior properties, not system geometry
-- [ ] If signatures differ → document which aspect differs and why (different nonlinearity, different discretization error structure)
-
-### 26. Cross-system replication: Duffing oscillator (harder regime)
-
-**Goal**: Stress-test the scaling taxonomy on a system with richer dynamics (potential chaos for driven Duffing, or strong nonlinearity for unforced).
-
-**Questions answered**: (1) does the signature replicate in a harder dynamical regime?
-
 #### 26a. System implementation
-- [ ] Implement Duffing RHS in `src/scaling_piml/systems/duffing.py`:
-  - Unforced: ẍ + δẋ + αx + βx³ = 0 (rewrite as 2D first-order system)
-  - Or forced (autonomous embedding): add phase variable θ̇ = ω for periodic forcing
-  - Choose parameter regime: unforced with strong cubic nonlinearity, or lightly damped + forced for mild chaos
-- [ ] Implement Duffing midpoint and composite physics losses
-- [ ] Identify exact-but-weak prior candidate:
-  - Unforced undamped Duffing has energy E = ½ẋ² + ½αx² + ¼βx⁴ (exact invariant)
-  - This is a good analog to the Lotka–Volterra conservation law
-- [ ] Add `--system duffing` support to CLI scripts
-- [ ] Create `configs/duffing.yaml`
+- [x] Implement Duffing RHS in `src/scaling_piml/systems/duffing.py`:
+  - $\dot{x} = y$, $\dot{y} = -\alpha x - \beta x^3$ (undamped, unforced)
+  - Default parameters: $\alpha = 1.0$, $\beta = 1.0$ (hardening spring)
+- [x] Implement Duffing midpoint and composite physics losses (same midpoint/composite structure, swap RHS)
+- [x] Implement Duffing conservation loss: $L_{\text{cons}} = (E(\hat{\bm{x}}_T) - E(\bm{x}_0))^2$ where $E = \frac{1}{2}y^2 + \frac{1}{2}\alpha x^2 + \frac{1}{4}\beta x^4$
+- [x] Add `--system duffing` support to `run_experiment.py`, `run_sweep.py`, `generate_datasets.py`
+- [x] Create `configs/duffing.yaml` with system parameters, IC domain, horizon, solver settings
 
 #### 26b. Data generation and validation
-- [ ] Choose parameter regime and initial condition domain
-- [ ] Choose T (stay below full period or chaos onset)
+- [ ] Choose IC domain (e.g., $x_0 \in [-2, 2]$, $y_0 \in [-2, 2]$) and horizon $T$
+- [ ] Choose $T$ such that the flow map is diffeomorphic ($T <$ shortest period in the IC domain)
 - [ ] Generate datasets for 3 data seeds → `data-duffing/data_seed={11,22,33}/`
-- [ ] Validate solver accuracy, measure ground-truth residuals
-- [ ] Verify dataset properties
+- [ ] Validate solver accuracy at chosen $T$
+- [ ] Measure ground-truth midpoint, composite, and conservation residuals at chosen $T$
+- [ ] Verify dataset properties: injectivity, Lipschitz bound, positivity where needed
 
 #### 26c. Runs
-- [ ] Full sweep: same protocol as section 25c
-- [ ] ~1,080–1,440 runs → `runs-duffing/`
+- [ ] Run full sweep: plain + midpoint + composite + conservation × 5 capacities × 8 dataset sizes × 3 data seeds × 3 train seeds
+- [ ] 4 models × 360 = **1,440 runs** → `runs-duffing/`
 
 #### 26d. Analysis
-- [ ] Fit scaling surfaces, compare taxonomy
-- [ ] Tabulate alongside Lotka–Volterra and Van der Pol
-- [ ] If Duffing is chaotic/near-chaotic: check whether all priors degrade, and whether the relative ordering is preserved
-- [ ] Cross-system summary table: (system, prior, E∞, α, β) for all 3 systems
+- [ ] Fit scaling surfaces for each model variant
+- [ ] Compare qualitative pattern: does midpoint raise E∞? Does composite recover scaling? Does conservation produce bimodality?
+- [ ] Tabulate (E∞, α, β) side-by-side with Lotka–Volterra results
+- [ ] If signatures replicate → strong evidence that taxonomy is tied to prior properties, not system geometry
+- [ ] If signatures differ → document which aspect differs and why
 
 ### 27. Noise robustness
 
@@ -377,15 +370,15 @@ Execution order matches experimental dependency, not section numbering.
 **Questions answered**: (3) does noise move exponents/floor as expected? (1) do signatures persist under corruption?
 
 #### 27a. Infrastructure — observation noise
-- [ ] Add `--obs-noise` argument to `run_experiment.py` and `run_sweep.py`: adds Gaussian noise to u(T) targets at training time
-- [ ] Noise levels: σ ∈ {0, 0.01, 0.05, 0.1} (fraction of per-component std of the targets)
-- [ ] Ensure noise is added after normalization and is reproducible (seeded per sample)
-- [ ] Ensure test/validation data remains clean (noise only on training targets)
+- [x] Add `--obs-noise` argument to `run_experiment.py` and `run_sweep.py`: adds Gaussian noise to u(T) targets at training time
+- [x] Noise levels: σ ∈ {0, 0.01, 0.05, 0.1} (fraction of per-component std of the targets)
+- [x] Ensure noise is added after normalization and is reproducible (seeded per sample)
+- [x] Ensure test/validation data remains clean (noise only on training targets)
 
 #### 27b. Infrastructure — prior mismatch
-- [ ] Add `--prior-params` argument to `run_experiment.py` to override system parameters used in the physics loss (while keeping the data-generating parameters fixed)
-- [ ] Mismatch levels: perturb each Lotka–Volterra parameter by ±5%, ±10%, ±20%
-- [ ] The data remains generated with true parameters; only the RHS in the physics loss uses perturbed parameters
+- [x] Add `--prior-params` argument to `run_experiment.py` to override system parameters used in the physics loss (while keeping the data-generating parameters fixed)
+- [x] Mismatch levels: perturb each Lotka–Volterra parameter by ±5%, ±10%, ±20%
+- [x] The data remains generated with true parameters; only the RHS in the physics loss uses perturbed parameters
 
 #### 27c. Runs — observation noise
 - [ ] Run on Lotka–Volterra, plain + midpoint + composite, at 4 noise levels
@@ -402,27 +395,64 @@ Execution order matches experimental dependency, not section numbering.
 - [ ] Compare: does noise affect data-axis (β) more than capacity-axis (α)? Does prior mismatch primarily affect the floor?
 - [ ] Report whether the qualitative taxonomy (biased/reduced-bias/exact-but-weak signatures) survives under corruption
 
+### 28. Training dynamics visualization (gradient-norm decomposition)
+
+**Goal**: Make the paper's mechanistic claim directly visible. The paper asserts that for the midpoint prior, $\lambda \|\nabla \mathcal{L}_{\text{phys}}\| / \|\nabla \mathcal{L}_{\text{data}}\|$ grows during training until the physics gradient dominates, causing saturation. A figure showing these two norms over training epochs (for plain, midpoint, composite at a representative $(N, D)$) would turn this inference into observable evidence.
+
+**Questions answered**: (3) causal mechanism — does the gradient-ratio crossover actually occur? Does the composite prior avoid it?
+
+#### 28a. Infrastructure — decomposed gradient logging
+- [x] Modify `train.py` to optionally log `grad_norm_data` and `grad_norm_phys` separately per epoch:
+  - After computing the total loss but before `L.backward()`, compute `L_data.backward(retain_graph=True)`, record data-component grad norms, zero grads, then `L.backward()` for the combined step
+  - Alternatively (cheaper): log the loss-value ratio (already done via `phys_data_ratio`) alongside the total `grad_norm`, which gives an approximate decomposition
+  - If exact decomposition is too expensive for all runs, add a `--log-grad-decomposition` flag that enables it for selected diagnostic runs only
+- [x] Add `grad_norm_data` and `grad_norm_phys` columns to the training CSV when the flag is active
+- [x] Create `scripts/plot_gradient_dynamics.py` that reads training CSVs and produces the overlay figure
+
+#### 28b. Diagnostic runs
+- [ ] Select 2–3 representative $(N, D)$ configurations: e.g., (Large, D=1024), (Medium, D=512)
+- [ ] Run plain, midpoint, composite, and conservation at each config with `--log-grad-decomposition` enabled
+- [ ] 4 models × 2–3 configs × 3 train seeds = **24–36 runs** → `runs-grad-dynamics/`
+
+#### 28c. Figures and analysis
+- [ ] Plot $\|\nabla \mathcal{L}_{\text{data}}\|$ and $\lambda \|\nabla \mathcal{L}_{\text{phys}}\|$ vs epoch for each model:
+  - Plain: only data gradient (no physics)
+  - Midpoint: expect physics gradient to dominate early; data gradient decays but physics gradient stays large → crossover → saturation
+  - Composite: expect both gradients to remain comparable throughout → no premature saturation
+  - Conservation: expect oscillatory / unstable gradient behavior at seeds that trap
+- [ ] Produce a 4-panel figure or 2×2 grid suitable for inclusion in the paper
+- [ ] Identify the epoch at which the midpoint physics gradient exceeds the data gradient — compare with the epoch at which early stopping fires
+- [ ] If the crossover is visible: strong mechanistic evidence for the floor-raising claim
+- [ ] If no clear crossover: revise the mechanistic explanation or note that the loss-ratio (already logged) is a sufficient proxy
+
 ---
 
 ## Phase 2 summary — execution order
 
-| Step | Section | Description | Est. runs | Depends on |
-|------|---------|-------------|-----------|------------|
-| 1 | 21 | Dense LV sweep (plain/midpoint/composite) | ~2,079 | — |
-| 2 | 22 | Horizon sweep on LV | ~3,240 | New data at T=0.5, T=2.0 |
-| 3 | 23 | Alternative ansatz + held-out validation | 0 (analysis only) | Steps 1–2 data |
-| 4 | 24 | Optimization rescue for conservation prior | ~150 | — |
-| 5 | 25 | Van der Pol replication | ~1,080–1,440 | System implementation |
-| 6 | 26 | Duffing replication | ~1,080–1,440 | System implementation |
-| 7 | 27 | Noise robustness | ~6,480 | — |
+| Priority | Section | Description | Est. runs | Depends on | Impact |
+|----------|---------|-------------|-----------|------------|--------|
+| 1 | 21 | Dense LV sweep (plain/midpoint/composite) | ~2,079 | — | Tightens CIs on all claims |
+| 2 | 22 | Horizon sweep on LV | ~3,240 | New data at T=0.5, T=2.0 | Proves causal mechanism |
+| 3 | 25 | Simpson's-rule prior (4th-order) | ~360–693 | Section 25a impl | Turns comparison into trend |
+| 4 | 24 | Optimization rescue for conservation prior | ~150 | — | Closes Limitation 6 |
+| 5 | 28 | Gradient dynamics visualization | ~24–36 | Section 28a impl | Visualizes core mechanism |
+| 6 | 26 | Duffing oscillator replication | ~1,440 | System implementation | Closes Limitation 1 |
+| 7 | 23 | Ansatz comparison on dense data | 0 (analysis) | Section 21 data | Updates existing results |
+| 8 | 27 | Noise robustness | ~6,480 | — | Robustness extension |
 
-Total Phase 2: ~14,000–15,000 runs.
+Total Phase 2: ~14,000–16,000 runs.
+
+**Priority tiers:**
+- **Tier A (must-have for submission):** Sections 21, 22, 25 — these directly address the paper's weakest quantitative claims (wide CIs, single-horizon, two-point comparison).
+- **Tier B (strongly recommended):** Sections 24, 28 — these close specific limitations and add mechanistic evidence.
+- **Tier C (strengthening extensions):** Sections 26, 27 — cross-system and noise robustness; high impact but high effort.
 
 ### Phase 2 completion criteria
-- [ ] At least 2 additional ODE systems with full scaling fits
+- [ ] Dense sweep narrows bootstrap CIs on composite exponents to ≤ 1.0 width (currently ~2.5)
 - [ ] Horizon variation confirms mechanistic link between discretization error and E∞
-- [ ] Alternative ansatzes compared; current ansatz wins or a better one is identified
+- [ ] Simpson prior establishes dose–response on discretization order (3+ data points)
 - [ ] Conservation prior ambiguity resolved (optimizer artifact vs surface corruption)
-- [ ] Held-out prediction validates the scaling ansatz as more than descriptive
-- [ ] Noise experiments confirm taxonomy survives under realistic corruption
+- [ ] Gradient dynamics figure shows physics/data gradient crossover for midpoint prior
+- [ ] At least 1 additional ODE system with full scaling fits (Duffing)
+- [ ] Alternative ansatzes re-compared on dense data; current ansatz wins or better one is identified
 - [ ] All results reproducible from scripts and configs alone

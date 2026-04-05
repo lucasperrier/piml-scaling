@@ -49,17 +49,21 @@
 %%  ABSTRACT
 %% ================================================================
 \begin{abstract}
-Physics-informed learning methods are typically evaluated at fixed model and dataset sizes, making it difficult to determine whether a physical prior changes learning behavior systematically or merely shifts performance in isolated settings.
+Physics-informed learning methods are often compared at a small number of fixed model and dataset sizes.
+Such evaluations can show whether a prior helps at a particular operating point, but they do not reveal whether the prior changes learning behavior systematically.
 We propose empirical scaling laws as a diagnostic framework for physics priors and demonstrate the approach on fixed-horizon flow-map prediction for the Lotka--Volterra system.
-We compare a plain multilayer perceptron against three physics-regularized variants---a single-step ODE-residual prior (midpoint rule), a composite two-step ODE-residual prior (reduced-bias midpoint), and a conservation-law prior---across five model capacities and eight dataset sizes, fitting
+We compare a plain multilayer perceptron against three physics-regularized variants---a single-step ODE-residual prior (midpoint rule), a composite two-step residual prior (reduced-bias midpoint), and a conservation-law prior---across five model capacities and eight dataset sizes, fitting joint scaling surfaces of the form
 \[
-E(N,D) \approx E_\infty + aN^{-\alpha} + bD^{-\beta}.
+E(N,D) \approx E_\infty + aN^{-\alpha} + bD^{-\beta},
 \]
-The three priors produce three qualitatively distinct scaling signatures, forming a diagnostic taxonomy.
-The \emph{single-step midpoint} prior, which incurs $\sim\!15\%$ irreducible approximation error at the tested horizon, raises the error floor to $\hat{E}_\infty \approx 0.011$ and compresses both scaling exponents ($\hat{\alpha} \approx 0.18$, $\hat{\beta} \approx 0.54$), making the model insensitive to additional data or capacity.
-The \emph{composite midpoint} prior, whose two-step discretization reduces the ground-truth residual by $\sim\!24\times$, recovers healthy scaling with steeper exponents ($\hat{\alpha} \approx 2.0$, $\hat{\beta} \approx 1.0$) than the plain baseline ($\hat{\alpha} \approx 0.93$, $\hat{\beta} \approx 0.87$) and a near-zero floor ($\hat{E}_\infty \approx 0.001$).
-The \emph{conservation-law} prior, which is exact but informationally weak (constraining a single scalar on a vector-valued output), introduces bimodal optimization failures that worsen with model capacity.
-These contrasting outcomes demonstrate that scaling-law analysis distinguishes not only whether a prior helps, but \emph{how} it modifies the learning surface: biased priors raise the error floor, reduced-bias priors steepen scaling exponents, and exact-but-weak priors corrupt the surface stochastically.
+where $E$ is test error, $N$ is model capacity, and $D$ is dataset size.
+
+The three priors produce three qualitatively distinct scaling signatures.
+The single-step midpoint prior, which incurs $\sim\!15\%$ irreducible approximation error at the tested horizon, raises the effective error floor ($\hat{E}_\infty \approx 0.011$) and compresses both scaling exponents ($\hat{\alpha} \approx 0.18$, $\hat{\beta} \approx 0.54$), making the model weakly responsive to additional data or capacity.
+The composite midpoint prior reduces the ground-truth residual by $\sim\!24\times$ and recovers healthy scaling with a near-zero floor ($\hat{E}_\infty \approx 0.001$).
+The conservation-law prior, although exact on ground-truth trajectories, is informationally weak and introduces seed-dependent bimodal optimization failures that worsen with model capacity.
+A systematic comparison across five alternative scaling ansatzes, including interaction terms and a nonparametric baseline, confirms that these qualitative conclusions are robust to the choice of functional form.
+These results show that scaling-law analysis can diagnose not only whether a physics prior helps, but \emph{how} it changes the learning surface: biased priors raise floors, reduced-bias priors recover useful scaling, and exact-but-weak priors can corrupt scaling through optimization instability.
 \end{abstract}
 
 %% ================================================================
@@ -83,16 +87,24 @@ We consider fixed-horizon flow-map prediction on the Lotka--Volterra system and 
 Do different physics priors produce distinguishable scaling signatures, and can these signatures diagnose the quality of the prior?
 \end{quote}
 
-We study \emph{three} physics priors on the same system and task: a single-step ODE residual (biased), a composite two-step ODE residual (reduced-bias), and an exact conservation-law invariant.
-This triad is chosen to span a range of prior accuracy and informational content, enabling a taxonomy of prior--scaling interactions.
+We study three priors on the same task.
+The first is a single-step ODE-residual prior based on the midpoint rule; it is structurally meaningful but biased at the tested horizon because exact trajectories do not satisfy the discretized residual exactly.
+The second is a composite two-step midpoint prior that reduces, but does not eliminate, that bias.
+The third is an exact conservation-law prior based on the system's first integral; it is unbiased on the true dynamics, but constrains only one scalar quantity on a vector-valued output and is therefore informationally weak.
+This triad---biased and strong, reduced-bias and structured, exact but weak---allows a controlled comparison of prior--scaling interactions.
 
-Our contributions are:
+Our central claim is empirical and methodological rather than universal and theoretical.
+We do not claim a general theory of physics-informed scaling from one ODE system.
+Instead, we show that even in this minimal setting, scaling-law analysis reveals information that pointwise evaluations miss: the three priors generate three distinct signatures---floor-raising, scaling recovery, and surface corruption---suggesting that physics priors should be evaluated not only by whether they help at one operating point, but by how they reshape the entire learning surface.
+
+The contributions of the paper are:
 
 \begin{enumerate}[leftmargin=*, itemsep=0.3em]
-    \item A scaling-law diagnostic protocol for evaluating physics priors on controlled dynamical systems, combining scaling fits with $\lambda$-sensitivity analysis and ground-truth residual checks.
-    \item A two-axis scaling study over model capacity ($N$) and dataset size ($D$) for four models---a plain baseline plus three physics-regularized variants---totalling over 1{,}400 training runs.
-    \item A three-way taxonomy of prior--scaling interactions: a \emph{biased} prior raises the error floor and compresses exponents; a \emph{reduced-bias} prior recovers and steepens scaling; an \emph{exact-but-weak} prior corrupts the scaling surface through stochastic optimization failure.
-    \item Empirical evidence that scaling exponents and error floors are \emph{more informative} than point-wise comparisons: two priors that both underperform the baseline in absolute terms produce fundamentally different scaling signatures with distinct implications for the practitioner.
+    \item A controlled scaling-law protocol for evaluating physics priors on a dynamical-system learning task, combining joint capacity--data sweeps, physics-loss diagnostics, and regularization-strength sweeps.
+    \item A two-axis scaling study over model capacity ($N$) and dataset size ($D$) for a plain MLP and three physics-regularized variants, totalling over 1{,}400 training runs.
+    \item A three-way taxonomy of prior--scaling interactions: a biased prior raises the error floor and compresses exponents, a reduced-bias prior recovers useful scaling, and an exact-but-weak prior corrupts the surface through stochastic optimization failure.
+    \item A systematic ansatz comparison using five alternative scaling functional forms, with BIC ranking and held-out cross-validation, confirming that the qualitative conclusions are robust to the choice of ansatz.
+    \item Evidence that scaling exponents, error floors, and stability patterns provide a more informative basis for evaluating physics priors than isolated benchmark comparisons.
 \end{enumerate}
 
 %% ================================================================
@@ -301,7 +313,7 @@ The full grid comprises $5 \times 8 \times 9 = 360$ runs per model, totaling 1{,
     \item Do physics priors produce distinct, interpretable signatures in the scaling surface $E(N,D)$?
     \item Does reducing the discretization bias of an ODE-residual prior recover healthy scaling?
     \item Does an exact but informationally weak prior (conservation law) improve data efficiency?
-    \item Can scaling exponents and error floors diagnose prior quality more informatively than point-wise comparisons?
+    \item Can scaling exponents and error floors diagnose prior quality more informatively than pointwise comparisons?
 \end{enumerate}
 
 %% ================================================================
@@ -488,8 +500,8 @@ The key insight emerges from the scaling fits rather than the absolute error lev
 \[
 \hat{E}_\infty \approx 0.001,\quad \hat{\alpha} \approx 2.0\;[0.26,\, 2.76],\quad \hat{\beta} \approx 1.0\;[0.64,\, 1.63].
 \]
-The composite prior recovers---and even steepens---the scaling exponents relative to the plain baseline ($\hat{\alpha} \approx 0.93$, $\hat{\beta} \approx 0.87$), while maintaining a near-zero error floor.
-The steeper exponents indicate that the composite model benefits \emph{more} from additional capacity and data than the plain model, consistent with the physics loss providing a useful (though imperfect) regularizer once the discretization bias is sufficiently reduced.
+The composite prior recovers healthy scaling with a near-zero error floor, and the point estimates of its exponents ($\hat{\alpha} \approx 2.0$, $\hat{\beta} \approx 1.0$) are at least as steep as those of the plain baseline ($\hat{\alpha} \approx 0.93$, $\hat{\beta} \approx 0.87$).
+The wide bootstrap intervals (especially on $\hat{\alpha}$) caution against overinterpreting the exact values, but the directional pattern is robust: the composite prior remains responsive to both data and capacity, unlike the single-step midpoint prior.
 
 The $\sim\!24\times$ reduction in ground-truth physics-loss residual (from $\mathcal{L}_{\mathrm{mid}}^* \approx 0.151$ to $\mathcal{L}_{\mathrm{comp}}^* \approx 0.006$) shifts the model from the approximation-limited regime---where the biased prior dominates---to a regime where both the data and physics gradients provide useful signal.
 The remaining $E_\infty \approx 0.001$ floor reflects the residual (but much smaller) discretization bias of the two-step scheme.
@@ -533,7 +545,7 @@ At xlarge capacity ($N = 132{,}866$), the composite achieves $E = 0.0049$ at $D 
         \midrule
         Plain MLP           & $\approx 0$  & 0.93\;[0.51, 1.39] & 0.87\;[0.63, 1.26] & Clean power-law \\
         PIML (midpoint)     & $\approx 0.011$ & 0.18\;[0.03, 0.52] & 0.54\;[0.38, 0.75] & Floor-raising (biased) \\
-        PIML (composite)    & $\approx 0.001$ & 2.0\;\;[0.26, 2.76] & 1.0\;\;[0.64, 1.63] & Exponent-steepening \\
+        PIML (composite)    & $\approx 0.001$ & 2.0\;\;[0.26, 2.76] & 1.0\;\;[0.64, 1.63] & Scaling recovery \\
         PIML (conservation) & \multicolumn{3}{c}{N/A (bimodal failure)} & Surface-corrupting \\
         \bottomrule
     \end{tabular}
@@ -616,6 +628,83 @@ The conservation-law $\lambda$ sweep results are presented in \cref{sec:results-
     \label{fig:lambda-conservation}
 \end{figure}
 
+\subsection{Scaling ansatz robustness: alternative functional forms}
+\label{sec:results-ansatz}
+
+A potential concern with the scaling results above is sensitivity to the assumed functional form (\cref{eq:scaling}).
+To address this, we fit five alternative ansatzes to the full error surface of each model:
+
+\begin{enumerate}[leftmargin=*, label=\textbf{\Alph*.}, itemsep=0.2em]
+    \item $E = E_\infty + a \cdot N^{-\alpha} + b \cdot D^{-\beta}$ \hfill (additive with floor; current default)
+    \item $E = a \cdot N^{-\alpha} + b \cdot D^{-\beta}$ \hfill (no floor; $E_\infty \equiv 0$)
+    \item $E = c \cdot N^{-\alpha} \cdot D^{-\beta}$ \hfill (multiplicative separable)
+    \item $E = E_\infty + a \cdot N^{-\alpha} + b \cdot D^{-\beta} + d \cdot N^{-\alpha} D^{-\beta}$ \hfill (additive + interaction)
+    \item Thin-plate spline on $\log N \times \log D \to \log E$ \hfill (nonparametric baseline)
+\end{enumerate}
+
+We compare ansatzes using BIC (which penalizes model complexity) and three held-out cross-validation strategies: leave-one-column-out (hold out all data at one $D$), leave-one-row-out (hold out one $N$), and leave-one-corner-out (extrapolation to the largest $(N,D)$ cell).
+
+\paragraph{BIC ranking.}
+\Cref{tab:ansatz-bic} summarizes the BIC ranking across models.
+Among the parametric ansatzes (A--D), Ansatz~D (interaction) ranks first for all three models, indicating that the additive separable form (Ansatz~A) systematically underestimates joint capacity--data effects.
+The nonparametric baseline (E) achieves best overall BIC but uses $\sim\!15$--$20$ effective parameters versus 3--6 for the parametric forms.
+For the plain model, the multiplicative Ansatz~C outperforms both additive forms (A, B), consistent with the near-zero $E_\infty$: when there is no error floor, the additive floor parameter is wasted.
+
+\begin{table}[H]
+    \centering
+    \caption{Ansatz BIC comparison across models (lower is better).
+    Among parametric ansatzes (A--D), Ansatz~D (interaction) ranks first for all models.
+    $k$ denotes the number of free parameters.}
+    \label{tab:ansatz-bic}
+    \small
+    \begin{tabular}{llrrr}
+        \toprule
+        & & \multicolumn{3}{c}{BIC} \\
+        \cmidrule(lr){3-5}
+        Ansatz & $k$ & Plain & Midpoint & Composite \\
+        \midrule
+        A (additive + floor)  & 5 & $-489$ & $-567$ & $-411$ \\
+        B (no floor)          & 4 & $-493$ & $-570$ & $-408$ \\
+        C (multiplicative)    & 3 & $-579$ & $-554$ & $-429$ \\
+        D (interaction)       & 6 & $-579$ & $-604$ & $-431$ \\
+        E (nonparametric)     & $\sim\!20$ & $-687$ & $-719$ & $-531$ \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\paragraph{Cross-validation.}
+\Cref{tab:ansatz-cv} reports the mean held-out RMSE under three strategies.
+Ansatz~D consistently achieves the lowest or near-lowest prediction error among parametric forms.
+The corner-out test (extrapolation) is the most discriminating: Ansatz~A predicts the largest $(N,D)$ cell well for the composite model (RMSE $6.4 \times 10^{-5}$) but poorly for the plain model (RMSE $5.2 \times 10^{-4}$), while Ansatz~D is uniformly accurate across models.
+
+\begin{table}[H]
+    \centering
+    \caption{Cross-validation mean RMSE ($\times 10^{-4}$) for held-out grid-cell prediction.
+    ``Col'' = leave-one-D-out; ``Row'' = leave-one-N-out; ``Corner'' = extrapolate to largest $(N,D)$.}
+    \label{tab:ansatz-cv}
+    \small
+    \begin{tabular}{l rrr rrr rrr}
+        \toprule
+        & \multicolumn{3}{c}{Plain} & \multicolumn{3}{c}{Midpoint} & \multicolumn{3}{c}{Composite} \\
+        \cmidrule(lr){2-4} \cmidrule(lr){5-7} \cmidrule(lr){8-10}
+        Ansatz & Col & Row & Corner & Col & Row & Corner & Col & Row & Corner \\
+        \midrule
+        A & 18.1 & 17.6 & 5.2 & 6.6 & 6.7 & 5.5 & 10.4 & 30.0 & 0.6 \\
+        B & 18.1 & 17.6 & 5.2 & 6.4 & 6.7 & 6.4 & 10.0 & 31.2 & 8.4 \\
+        C & 7.4 & 8.3 & 4.5 & 10.0 & 8.6 & 13.2 & 7.7 & 17.1 & 7.1 \\
+        D & 8.9 & 5.7 & 3.9 & 4.8 & 5.7 & 2.3 & 8.7 & 18.2 & 6.0 \\
+        E & 4.9 & 5.6 & 0.1 & 3.8 & 4.7 & 0.5 & 4.6 & 15.0 & 0.0 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\paragraph{Implications for the main results.}
+The ansatz comparison confirms two key findings.
+First, the qualitative scaling signatures identified in \cref{tab:scaling-params}---floor-raising for midpoint, scaling recovery for composite, near-zero floor for plain---are not artifacts of the assumed functional form.
+Ansatz~D captures the same distinctions with improved residuals (RSS $\sim\!2\times$ lower than Ansatz~A for the plain model).
+Second, the interaction term $d \cdot N^{-\alpha} D^{-\beta}$ reveals that capacity and data scaling are not fully separable: the fitted interaction coefficient is substantial ($d \approx 0.5$--$13$), particularly for the midpoint and composite models.
+This suggests that the physics prior mediates a joint capacity--data effect that the additive ansatz misses.
+
 %% ================================================================
 %%  DISCUSSION
 %% ================================================================
@@ -631,17 +720,16 @@ The central finding is that the three physics priors produce three qualitatively
     This elevates $\hat{E}_\infty$ by an order of magnitude and compresses both scaling exponents ($\hat{\alpha}: 0.93 \to 0.18$, $\hat{\beta}: 0.87 \to 0.54$).
     The model becomes insensitive to additional data or capacity.
 
-    \item \textbf{Exponent-steepening (reduced-bias proxy).}
+    \item \textbf{Scaling recovery (reduced-bias proxy).}
     The composite two-step midpoint prior reduces the ground-truth residual by $\sim\!24\times$.
-    This recovers---and steepens---the scaling exponents ($\hat{\alpha} \approx 2.0$, $\hat{\beta} \approx 1.0$) while maintaining a near-zero floor ($\hat{E}_\infty \approx 0.001$).
-    The model benefits \emph{more} from additional capacity and data than the plain baseline.
+    This recovers a low-floor, responsive learning surface ($\hat{E}_\infty \approx 0.001$) with scaling exponents ($\hat{\alpha} \approx 2.0$, $\hat{\beta} \approx 1.0$) at least as steep as the plain baseline.
 
     \item \textbf{Surface-corrupting (exact but informationally weak).}
     The conservation-law prior has zero bias but constrains only a single scalar on a 2-dimensional output.
     Rather than improving scaling, it introduces bimodal optimization failure that worsens with model capacity, precluding power-law fitting.
 \end{enumerate}
 
-These three signatures are \emph{not} visible in point-wise comparisons.
+These three signatures are \emph{not} visible in pointwise comparisons.
 At any single $(N,D)$ configuration, both ODE-residual priors underperform the plain baseline in absolute terms; only the scaling exponents and error floors reveal that the single-step prior destroys scaling behavior while the composite prior enhances it.
 
 \subsection{Why the midpoint prior raises the floor}
@@ -660,7 +748,7 @@ This mechanism produces the monotonic dose--response degradation in the $\lambda
 Halving the step size from $T$ to $T/2$ in the composite scheme reduces the ground-truth physics loss by $\sim\!24\times$ (from $0.151$ to $0.006$; \cref{app:lambda-diagnostic}).
 This shifts the model from the approximation-limited regime---where the biased prior floor dominates---into a regime where both data and physics gradients provide useful signal throughout training.
 
-The steeper exponents ($\hat{\alpha} \approx 2.0$ vs.\ $0.93$) suggest that the physics regularization acts as an implicit constraint that accelerates convergence along the capacity and data axes, analogous to how well-matched regularizers improve sample complexity in classical learning theory.
+The recovered exponents ($\hat{\alpha} \approx 2.0$ vs.\ $0.93$; noting the wide bootstrap intervals) are consistent with the physics regularization providing useful signal throughout training, analogous to how well-matched regularizers improve sample complexity in classical learning theory.
 The remaining error floor ($\hat{E}_\infty \approx 0.001$) reflects the residual discretization bias of the two-step scheme and could, in principle, be further reduced with higher-order or multi-step methods.
 
 This result has a practical implication: for ODE-residual priors, the \emph{accuracy of the numerical discretization} determines whether the prior helps or hurts in the scaling limit.
@@ -676,23 +764,20 @@ This pathology is distinct from the training failures reported for PINNs~\cite{w
 The conservation failure is geometric rather than spectral: it stems from the rank deficiency of the constraint Jacobian relative to the output dimension.
 Informational sufficiency---whether the physics prior constrains all output degrees of freedom---may be as important as bias-freeness.
 
-\subsection{Implications for prior design}
+\subsection{Practical implications}
 
-The three-way taxonomy maps onto a practical design space for physics-informed losses:
+The results suggest a simple workflow for evaluating candidate soft physics priors before committing to large-scale experiments.
 
-\begin{itemize}[leftmargin=*]
-    \item \textbf{Soft residual penalties} (e.g., PINN-style collocation losses~\cite{raissi2019pinn,cuomo2022}) impose approximate dynamic constraints.
-    Our results show that the \emph{discretization accuracy} determines the scaling outcome: a biased single-step residual raises the error floor, while a reduced-bias composite residual steepens exponents.
-    The ground-truth residual magnitude is a simple predictive diagnostic.
-    \item \textbf{Exact but partial constraints} (e.g., conservation laws, symmetry penalties) are bias-free but may be informationally insufficient, creating degenerate directions in the loss landscape.
-    Our conservation-prior results show that such constraints can introduce capacity-dependent optimization failures even when the prior is theoretically ideal.
-    \item \textbf{Hard architectural constraints} (e.g., Hamiltonian or symplectic network structures~\cite{willard2022,chen2018node}) embed physics directly into the parameterization, eliminating certain failure modes by construction.
-    Whether architectural constraints produce floor-raising, exponent-steepening, or novel scaling signatures is an open empirical question.
-    \item \textbf{Operator-learning architectures} (e.g., DeepONet~\cite{lu2019deeponet}, Fourier Neural Operators~\cite{li2020fno}) encode structural assumptions about the solution operator.
-    Theoretical work on neural scaling for elliptic PDEs~\cite{lu2021elliptic} suggests fundamentally different scaling exponents; the taxonomy developed here provides a framework for empirical verification.
-\end{itemize}
+First, compute the prior residual on exact or high-quality reference targets whenever possible.
+A large nonzero residual is a warning that the prior may impose a harmful floor; the ground-truth residual magnitude of an ODE-residual prior predicts its scaling behavior before any training runs.
 
-A key open question is whether the three scaling signatures identified here---floor-raising, exponent-steepening, and surface-corrupting---recur across these different prior classes.
+Second, run a small $\lambda$-sweep.
+A monotone dose--response degradation pattern is evidence of biased prior--task mismatch; non-monotone, seed-sensitive behavior indicates a different class of failure, more likely related to optimization geometry.
+
+Third, inspect the joint $(N,D)$ surface rather than one or two benchmark settings.
+Distinct priors can produce superficially similar pointwise underperformance while differing sharply in why they fail.
+
+The ansatz comparison (\cref{sec:results-ansatz}) adds a further consideration: the interaction term $d \cdot N^{-\alpha}D^{-\beta}$ is significant for all three models but varies in magnitude ($d \approx 0.5$ for midpoint, $d \approx 7.4$ for plain, $d \approx 13.1$ for composite), indicating that capacity and data scaling are not fully separable and that physics priors modulate their coupling.
 
 \subsection{Connection to scaling-law theory}
 
@@ -701,43 +786,20 @@ In this framework, the plain MLP in our study operates in a regime where both li
 
 The midpoint prior disrupts this picture by introducing a third limitation: an \emph{approximation-limited} regime in which the irreducible bias of the physics loss creates a floor that dominates both the variance and resolution components.
 This floor manifests as the large $\hat{E}_\infty$ and compressed exponents in \cref{tab:scaling-params}.
-The composite prior demonstrates that reducing this bias can \emph{exit} the approximation-limited regime, recovering (and steepening) the original scaling behavior.
+The composite prior demonstrates that reducing this bias can \emph{exit} the approximation-limited regime, recovering healthy scaling behavior.
 The conservation prior introduces yet another regime: an \emph{optimization-limited} regime where the loss landscape geometry, rather than data or capacity, determines performance.
 These additional regimes are absent from the standard deep-learning scaling framework and may require dedicated theoretical treatment for SciML settings.
 
 The observation that scientific learning problems can be simultaneously variance-limited, resolution-limited, approximation-limited, and optimization-limited---depending on the form of the physics prior---motivates extending scaling-law theory to accommodate structured loss functions and constrained architectures.
 Recent surveys of scaling behavior across machine learning settings~\cite{wang2024scaling} document similar anomalies in other structured domains, suggesting that regime transitions driven by inductive-bias mismatch may be a general phenomenon.
 
-\subsection{Toward a scaling-law framework for SciML}
+\subsection{Why this paper stays narrow}
 
-This paper is the first case study in a broader research program that aims to adapt empirical scaling laws to scientific machine learning and use them as a method-agnostic diagnostic for physics-informed priors.
-The present results establish the experimental methodology on a minimal dynamical system and identify three qualitative scaling signatures.
-The research program is organized around four questions that extend beyond the scope of this initial study:
-
-\begin{enumerate}[leftmargin=*, itemsep=0.3em]
-    \item \emph{How should scaling laws be reformulated for dynamical systems and PDE flow maps?}
-    The standard ansatz (\cref{eq:scaling}) assumes smooth power-law behavior, which the conservation prior violates.
-    Extensions may need to incorporate prediction horizon, discretization resolution, and parameter variability as additional scaling axes.
-    \item \emph{Can different physics priors be compared quantitatively through their scaling signatures?}
-    Our results show that three priors on the same system produce three distinct and interpretable signatures.
-    The next step is to test whether these distinctions persist across PINN-style collocation, architectural constraints, and operator-learning approaches~\cite{raissi2019pinn,li2020fno,lu2019deeponet}.
-    \item \emph{Do different forms of inductive bias produce characteristic scaling regimes?}
-    The approximation-limited, regularization-enhanced, and optimization-limited regimes identified here may have counterparts for other prior types.
-    Connecting these empirical regimes to the variance-limited/resolution-limited framework of Bahri et al.~\cite{bahri2024} and the generalization bounds of Lu et al.~\cite{lu2021elliptic} is a central theoretical goal.
-    \item \emph{When do scaling behaviors generalize across systems and when do they diverge?}
-    The present study uses a single ODE system.
-    Subsequent work will extend to 1D PDEs (diffusion, Burgers, wave equations) as standard PINN and operator-learning benchmarks~\cite{raissi2019pinn,li2020fno}, followed by more complex nonlinear regimes including 2D Navier--Stokes and multiscale closure problems~\cite{sanderse2024}.
-\end{enumerate}
-
-The staged design---from analytically tractable ODEs to increasingly complex PDE families---is intended to build understanding progressively, identifying which scaling phenomena are universal and which are system-specific.
-A final validation phase will apply the framework to real-world datasets from scientific or industrial contexts to assess whether scaling-based insights obtained under controlled conditions transfer to noisy, imperfect data.
-
-\subsection{Why Lotka--Volterra?}
-
-Lotka--Volterra provides a minimal nonlinear dynamical system that is simple enough for exhaustive sweeps yet nontrivial enough to make inductive bias relevant.
-It possesses an exact first integral, enabling a controlled comparison between an exact and an approximate prior on the same task.
-The system also generates closed orbits with significant curvature at $T=1.0$, which stresses the midpoint approximation and makes the conservation prior geometrically nontrivial.
-Conclusions should not be overgeneralized to PDE learning, chaotic systems, or more complex physics-informed architectures; the purpose of this study is methodological calibration, not broad empirical generalization.
+Lotka--Volterra is a deliberately minimal system.
+It is simple enough to permit exhaustive sweeps and direct diagnostics, yet rich enough to include nonlinear flow structure and an exact invariant.
+The purpose of this paper is not to establish universal laws for all scientific machine learning.
+It is to show, in the cleanest possible setting, that scaling surfaces can reveal diagnostically meaningful differences among physics priors.
+A broader research program should test whether the same signatures recur in other ODEs, PDE flow-map tasks, and richer physics-informed architectures.
 
 %% ================================================================
 %%  LIMITATIONS
@@ -745,14 +807,15 @@ Conclusions should not be overgeneralized to PDE learning, chaotic systems, or m
 \section{Limitations}
 
 \begin{enumerate}[leftmargin=*, itemsep=0.3em]
-    \item The study uses a single dynamical system (Lotka--Volterra).
-    \item It compares a plain MLP against three soft-constraint regularizers; architectural physics priors are not tested.
-    \item It focuses on fixed-horizon prediction ($T = 1.0$) rather than long autoregressive rollout.
-    \item It uses noise-free synthetic data.
-    \item The scaling-law ansatz \cref{eq:scaling} is a descriptive approximation, not a theoretical prediction.
-    \item The composite prior's steeper exponents have wide bootstrap confidence intervals ($\hat{\alpha} \in [0.26, 2.76]$), reflecting limited data at small capacities; higher-resolution sweeps would tighten these estimates.
-    \item The conservation prior's bimodal failure might be ameliorated by optimization techniques (warm-starting, gradient clipping, adaptive $\lambda$ scheduling) not tested here.
-    \item No prior tested here improves over the plain baseline in absolute test error at any configuration; the composite prior's advantage is visible only in scaling exponents and error floor.
+    \item The study uses a single dynamical system (Lotka--Volterra); conclusions should not be overgeneralized to PDE learning, chaotic systems, or real-world scientific datasets.
+    \item It compares a plain MLP against three soft-constraint regularizers; hard architectural constraints and operator-learning approaches are not tested.
+    \item The task is fixed-horizon flow-map prediction at $T = 1.0$, not long-horizon rollout, and all data are synthetic and noise-free.
+    \item The scaling fits are descriptive.
+    Although the ansatz comparison (\cref{sec:results-ansatz}) shows qualitative robustness, the fitted exponents should not be treated as universal constants.
+    The composite prior's estimated capacity exponent has wide uncertainty ($\hat{\alpha} \in [0.26, 2.76]$), so the main claim should be read as ``healthy low-floor scaling is recovered,'' not as a precise quantitative law.
+    \item No prior tested here improves over the plain baseline in absolute test error; the composite prior's advantage is visible only in scaling exponents and error floor.
+    \item The conservation-law failures may depend on the chosen optimizer and could potentially be reduced by methods not explored here, such as continuation strategies or adaptive weighting.
+    \item The ansatz comparison reveals a non-negligible interaction term ($d \cdot N^{-\alpha}D^{-\beta}$), suggesting the additive separable ansatz used for the main results is a simplification.
 \end{enumerate}
 
 %% ================================================================
@@ -760,21 +823,19 @@ Conclusions should not be overgeneralized to PDE learning, chaotic systems, or m
 %% ================================================================
 \section{Conclusion}
 
-We introduced empirical scaling laws as a diagnostic framework for evaluating physics priors in scientific machine learning.
-On fixed-horizon Lotka--Volterra flow-map prediction, we compared a plain MLP against three physics-regularized variants across model capacity and dataset size, totaling over 1{,}400 training runs.
+We introduced empirical scaling laws as a diagnostic framework for evaluating physics priors in scientific machine learning and applied the approach to fixed-horizon Lotka--Volterra flow-map prediction.
+Across more than 1{,}400 runs, three simple priors produced three qualitatively different scaling signatures.
 
-The three priors produce three qualitatively distinct scaling signatures:
-\begin{itemize}[leftmargin=*, itemsep=0.2em]
-    \item A \emph{biased} ODE-residual prior raises the error floor and compresses scaling exponents ($\hat{\alpha}: 0.93 \to 0.18$, $\hat{\beta}: 0.87 \to 0.54$).
-    \item A \emph{reduced-bias} composite ODE-residual prior recovers and steepens scaling ($\hat{\alpha} \approx 2.0$, $\hat{\beta} \approx 1.0$) with a near-zero floor.
-    \item An \emph{exact but informationally weak} conservation prior introduces bimodal optimization failures that worsen with model capacity.
-\end{itemize}
+A biased single-step ODE-residual prior raised the error floor and compressed scaling exponents.
+A reduced-bias composite residual prior recovered a low-floor, responsive learning surface.
+An exact but informationally weak conservation prior corrupted the surface through bimodal optimization failure.
+These signatures persisted across five alternative scaling ansatzes, including models with interaction terms and a nonparametric baseline.
 
-The main contribution is methodological: scaling laws serve not only as a compact summary of learning behavior, but as a diagnostic tool that reveals \emph{how} a prior modifies the learning surface.
-Two priors that both underperform the baseline in absolute terms produce fundamentally different scaling signatures---one destructive, one constructive---that are invisible to point-wise comparisons.
-The ground-truth residual magnitude of an ODE-residual prior predicts its scaling behavior before any training runs, providing a simple pre-experimental diagnostic.
-
-This perspective---treating scaling behavior itself as the object of study---supports a more principled basis for evaluating physical inductive biases and motivates extending scaling-law methodology to broader classes of physics-informed methods and PDE systems.
+The main contribution is methodological.
+Scaling behavior itself can serve as an evaluation object in scientific machine learning.
+Priors should be judged not only by whether they improve one benchmark score, but by how they reshape the joint dependence of error on data, model size, and optimization.
+Even in a minimal ODE setting, this perspective reveals distinctions that pointwise comparisons miss: two priors that both underperform the baseline in absolute terms produce fundamentally different scaling signatures---one destructive, one constructive.
+That makes scaling-law analysis a promising tool for more principled evaluation of physical inductive biases in future scientific learning studies.
 
 \section*{Acknowledgments}
 
@@ -827,7 +888,7 @@ No value of $\lambda$ can fix this: small $\lambda$ makes the prior invisible; l
 This creates a characteristic dose--response degradation pattern (\cref{tab:lambda-midpoint}) that is a hallmark of floor-raising prior--task mismatch.
 
 The composite two-step midpoint reduces this floor by $\sim\!24\times$, shifting the balance so that the physics gradient provides useful signal rather than harmful bias.
-The resulting scaling behavior (\cref{sec:results-composite}) shows recovered and steepened exponents.
+The resulting scaling behavior (\cref{sec:results-composite}) shows recovered exponents and a near-zero floor.
 
 The conservation-law prior shows a contrasting pattern.
 Because $\mathcal{L}_{\mathrm{cons}}^* \approx 10^{-14}$, there is no irreducible floor.

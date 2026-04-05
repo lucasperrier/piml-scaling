@@ -21,6 +21,7 @@ from scaling_piml.data.dataset import FlowMapDataset
 from scaling_piml.losses import (
     physics_midpoint_residual, mse_loss, physics_loss,
     composite_midpoint_loss, conservation_loss,
+    simpson_loss,
 )
 from scaling_piml.systems.lotka_volterra import lotka_volterra_rhs
 
@@ -108,10 +109,17 @@ def check_composite_ground_truth_residual(data_root: str, cfg) -> dict:
     # Conservation loss on ground truth
     conservation_loss_val = float(conservation_loss(u0=u0, uT_hat=uT, **sys_kw))
 
+    # Simpson's 1/3-rule loss on ground truth (4th-order)
+    simpson_loss_val = float(simpson_loss(
+        u0=u0, uT2_hat=uT2, uT_hat=uT, T=T, **sys_kw,
+    ))
+
     return {
         "composite_midpoint_loss_on_truth": composite_loss_val,
         "single_midpoint_loss_on_truth": single_loss_val,
-        "reduction_factor": single_loss_val / max(composite_loss_val, 1e-15),
+        "simpson_loss_on_truth": simpson_loss_val,
+        "reduction_factor_composite": single_loss_val / max(composite_loss_val, 1e-15),
+        "reduction_factor_simpson": single_loss_val / max(simpson_loss_val, 1e-15),
         "conservation_loss_on_truth": conservation_loss_val,
     }
 
@@ -243,7 +251,8 @@ def main() -> None:
     comp_res = check_composite_ground_truth_residual(args.data_root, cfg)
     for k, v in comp_res.items():
         print(f"  {k}: {v:.6g}")
-    print(f"\n  Composite 2-step midpoint reduces GT residual by ~{comp_res['reduction_factor']:.0f}x")
+    print(f"\n  Composite 2-step midpoint reduces GT residual by ~{comp_res['reduction_factor_composite']:.0f}x")
+    print(f"  Simpson's 1/3-rule reduces GT residual by ~{comp_res['reduction_factor_simpson']:.0f}x")
     print(f"  Conservation loss on GT: {comp_res['conservation_loss_on_truth']:.2e} (should be ~0)")
 
     # 2. Loss scale mismatch

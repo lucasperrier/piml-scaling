@@ -1,0 +1,38 @@
+system:
+  name: duffing
+  # Undamped, unforced Duffing oscillator: dx/dt = y, dy/dt = -alpha*x - beta*x^3
+  alpha: 1.0        # linear stiffness
+  beta: 1.0         # cubic stiffness (hardening spring)
+
+solver:
+  method: DOP853
+  rtol: 1.0e-9
+  atol: 1.0e-11
+
+data:
+  T: 1.0
+  # IC domain: x0 ∈ [-2, 2], y0 ∈ [-2, 2]
+  x0_low: -2.0
+  x0_high: 2.0
+  y0_low: -2.0
+  y0_high: 2.0
+  train_pool: 20000
+  val_size: 2000
+  test_size: 2000
+  dataset_sizes: [64, 128, 256, 512, 1024, 2048, 4096, 8192]
+  data_seeds: [11, 22, 33]
+
+model:
+  activation: relu
+  hidden_widths: [64, 64]
+
+train:
+  lr: 1.0e-3
+  weight_decay: 1.0e-6
+  batch_size_cap: 128
+  max_epochs: 400
+  early_stopping_patience: 40
+  lambda_phys: 0.1
+  train_seeds: [101, 202, 303]
+
+out_dir: runs-duffing

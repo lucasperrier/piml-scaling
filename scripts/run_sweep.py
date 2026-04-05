@@ -47,7 +47,7 @@ def _run_dir(out_root: Path, model: str, capacity_name: str, dataset_size: int, 
     )
 
 
-_PRIOR_MAP = {"plain": "none", "piml": "midpoint", "piml-conservation": "conservation", "piml-simpson": "simpson"}
+_PRIOR_MAP = {"plain": "none", "piml": "midpoint", "piml-conservation": "conservation", "piml-simpson": "simpson", "piml-simpson-true": "simpson-true"}
 
 
 def _failure_metrics(*, model: str, capacity_name: str, hidden_widths: list[int], dataset_size: int, data_seed: int, train_seed: int, data_root: Path, run_dir: Path, reason: str) -> dict[str, object]:
@@ -101,9 +101,19 @@ def main() -> None:
     parser.add_argument("--pilot", action="store_true", help="Run the recommended pilot subset")
     parser.add_argument("--overwrite", action="store_true", help="Re-run even if metrics.json already exists")
     parser.add_argument("--lambda-phys", type=float, default=None, help="Override lambda_phys for PIML runs")
+    parser.add_argument("--horizon", type=float, default=None, help="Override data.T (horizon)")
+    parser.add_argument("--obs-noise", type=float, default=0.0,
+                        help="Gaussian noise std added to training targets")
+    parser.add_argument("--prior-params", type=str, default=None,
+                        help="Override system params in physics loss (comma-sep: alpha,beta,delta,gamma)")
+    parser.add_argument("--system", type=str, default=None,
+                        choices=["lotka-volterra", "duffing"],
+                        help="Override system name in config")
     args = parser.parse_args()
 
     cfg = load_experiment_config(args.config)
+    if args.system is not None:
+        cfg.system.name = args.system
     out_root = Path(args.out) if args.out else Path(cfg.out_dir)
     data_dir = Path(args.data_dir)
 
@@ -124,7 +134,7 @@ def main() -> None:
     run_index = 0
 
     for model in models:
-        if model not in {"plain", "piml", "piml-conservation", "piml-simpson"}:
+        if model not in {"plain", "piml", "piml-conservation", "piml-simpson", "piml-simpson-true"}:
             raise ValueError(f"Unknown model: {model}")
         for capacity_name in capacities:
             if capacity_name not in CAPACITY_GRID:
@@ -146,8 +156,21 @@ def main() -> None:
                         run_cfg.model.hidden_widths = CAPACITY_GRID[capacity_name]
                         if args.lambda_phys is not None:
                             run_cfg.train.lambda_phys = args.lambda_phys
+                        if args.horizon is not None:
+                            run_cfg.data.T = args.horizon
 
-                        train_ds = FlowMapDataset(data_root, "train", D=dataset_size, normalize=True)
+                        # Prior mismatch: override system params in physics loss
+                        if args.prior_params is not None:
+                            pp = [float(v) for v in args.prior_params.split(",")]
+                            run_cfg.system.alpha = pp[0]
+                            run_cfg.system.beta = pp[1]
+                            if len(pp) > 2:
+                                run_cfg.system.delta = pp[2]
+                            if len(pp) > 3:
+                                run_cfg.system.gamma = pp[3]
+
+                        train_ds = FlowMapDataset(data_root, "train", D=dataset_size, normalize=True,
+                                                   obs_noise=args.obs_noise, noise_seed=train_seed)
                         val_ds = FlowMapDataset(data_root, "val", normalize=True)
                         test_ds = FlowMapDataset(data_root, "test", normalize=True)
 

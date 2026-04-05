@@ -32,17 +32,26 @@ Three-way taxonomy:
 - **Reduced-bias prior** (composite): recovers and steepens scaling
 - **Exact-but-weak prior** (conservation): corrupts scaling surface stochastically
 
-### Phase 2 — Extended experiments (planned)
+### Phase 2 — Extended experiments (in progress)
 
-| # | Experiment | Purpose | Est. runs |
-|---|-----------|---------|-----------|
-| 1 | Dense LV sweep | Statistical power for main comparisons | ~2,079 |
-| 2 | Horizon sweep | Mechanistic test: discretization error ↔ E∞ | ~3,240 |
-| 3 | Alternative ansatzes + held-out validation | Fit robustness and predictive adequacy | 0 (analysis) |
-| 4 | Optimization rescue (conservation) | Resolve bimodality ambiguity | ~150 |
-| 5 | Van der Pol replication | Cross-system: smooth nonlinear oscillator | ~1,080–1,440 |
-| 6 | Duffing replication | Cross-system: harder/chaotic regime | ~1,080–1,440 |
-| 7 | Noise robustness | Observation noise + prior parameter mismatch | ~6,480 |
+| # | Experiment | Purpose | Est. runs | Status |
+|---|-----------|---------|-----------|--------|
+| 1 | Dense LV sweep | Statistical power for main comparisons | ~2,079 | **Running on GPU** (353/2,079 = 17%) |
+| 2 | Horizon sweep | Mechanistic test: discretization error ↔ E∞ | ~3,240 | Infrastructure done, runs pending |
+| 3 | Alternative ansatzes + held-out validation | Fit robustness and predictive adequacy | 0 (analysis) | **Done** on Phase 1 + combined data |
+| 4 | Optimization rescue (conservation) | Resolve bimodality ambiguity | ~150 | Infrastructure done, runs pending |
+| 5 | Simpson's 1/3-rule (4th-order) | Dose–response on discretization order | ~360–693 | **Implemented**, runs pending |
+| 6 | Duffing oscillator | Cross-system replication | ~1,440 | **Implemented**, data + runs pending |
+| 7 | Noise robustness | Observation noise + prior mismatch | ~6,480 | **Implemented**, runs pending |
+| 8 | Gradient dynamics | Visualize physics/data gradient crossover | ~24–36 | **Implemented**, diagnostic runs pending |
+
+#### Key findings (Phase 2, preliminary)
+
+**Ansatz comparison** (Section 23, complete on Phase 1 + combined data):
+- BIC ranking: E (nonparametric) > D (interaction) > C/B/A, consistent across all three models
+- Ansatz D (interaction term $d \cdot N^{-\alpha} D^{-\beta}$) dominates Ansatz A (current default) in both BIC and held-out CV
+- Interaction coefficient significant: $d \approx 0.5$ (piml), $d \approx 7.4$ (plain), $d \approx 13.1$ (piml-simpson)
+- Qualitative conclusions (three-way taxonomy) are robust across all five functional forms
 
 See `IMPLEMENTATION_CHECKLIST.md` for detailed task breakdowns.
 
@@ -179,9 +188,9 @@ $$\mathcal{L}_{\text{cons}} = \left( H(\hat{u}(T)) - H(u_0) \right)^2$$
 |------|--------------|--------|
 | tiny | `[32, 32]` | Implemented |
 | small | `[64, 64]` | Implemented |
-| small-med | `[96, 96]` | Planned (Phase 2) |
+| small-med | `[96, 96]` | Implemented |
 | medium | `[128, 128]` | Implemented |
-| med-large | `[192, 192]` | Planned (Phase 2) |
+| med-large | `[192, 192]` | Implemented |
 | large | `[256, 256]` | Implemented |
 | xlarge | `[256, 256, 256]` | Implemented |
 
@@ -192,10 +201,12 @@ configs/           YAML configs (default, pilot, smoke, per-system)
 data/              Lotka–Volterra datasets (3 data seeds)
 data-vdp/          Van der Pol datasets (planned)
 data-duffing/      Duffing datasets (planned)
+dashboard/         Streamlit monitoring dashboard
 paper/             LaTeX draft
 runs-progress/     Phase 1 main results (plain + midpoint)
 runs-simpson/      Composite (simpson) results
-runs-dense/        Phase 2 dense sweep (planned)
+runs-combined/     Phase 1 combined metrics (all 3 models) + ansatz comparison
+runs-dense/        Phase 2 dense sweep (in progress on GPU)
 runs-horizon/      Phase 2 horizon sweep (planned)
 runs-rescue/       Phase 2 optimization rescue (planned)
 runs-vdp/          Van der Pol results (planned)
@@ -229,6 +240,41 @@ python scripts/aggregate_runs.py --runs-root runs-progress --out-dir runs-progre
 # Fit scaling laws
 python scripts/fit_scaling.py --grouped-metrics runs-progress/grouped_metrics.csv \
   --out-dir runs-progress
+
+# Validate scaling ansatzes (Section 23)
+python scripts/validate_scaling_fits.py \
+  --grouped-metrics runs-progress/grouped_metrics.csv \
+  --out-dir runs-progress/ansatz_comparison --n-boot 500
+
+# Run horizon sweep (Section 22)
+python scripts/run_horizon_sweep.py --config configs/default.yaml \
+  --data-dir data --generate-data --models plain,piml,piml-simpson
+
+# Run rescue sweep (Section 24)
+python scripts/run_rescue_sweep.py --config configs/default.yaml \
+  --data-dir data --out runs-rescue
+
+# Generate all paper figures
+python scripts/generate_figures.py --grouped-metrics runs-combined/grouped_metrics.csv \
+  --scaling-fits runs-combined/scaling_fits.json --out-dir figures
+
+# Generate Duffing data (Section 26)
+python scripts/generate_datasets.py --config configs/duffing.yaml \
+  --out data-duffing --system duffing
+
+# Run with observation noise (Section 27)
+python scripts/run_sweep.py --config configs/default.yaml \
+  --data-dir data --obs-noise 0.05 --out runs-noise/obs/sigma=0.05
+
+# Run with prior mismatch (Section 27)
+python scripts/run_sweep.py --config configs/default.yaml \
+  --data-dir data --prior-params 1.575,1.05,1.05,3.15 --out runs-noise/mismatch/delta=0.05
+
+# Run with gradient decomposition logging (Section 28)
+python scripts/run_experiment.py --config configs/default.yaml \
+  --data-root data/data_seed=11 --D 1024 --train-seed 101 \
+  --model piml --capacity large --log-grad-decomposition \
+  --out runs-grad-dynamics
 ```
 
 ## Training protocol
@@ -261,8 +307,10 @@ $$2 \times 5 \times 8 \times 3 \times 3 = 720\text{ runs}$$
 `7` λ values × `2` capacities × `3` dataset sizes × `1` data seed × `3` train seeds = **126 runs**
 
 ### Remaining
-- [ ] Conservation full scaling sweep (pending: no beneficial λ found)
-- [ ] Figure generation
+- [x] Figure generation (all 6 figures generated in `figures/`)
+- [ ] Dense sweep completion (in progress on GPU)
+- [ ] Horizon sweep runs
+- [ ] Rescue sweep runs
 
 ## Metrics
 
@@ -312,8 +360,9 @@ Aggregate over data seeds and train seeds for each (model, N, D).
 ### Per-run artifacts
 - Frozen config
 - Metrics JSON
-- Training history CSV
-- Optional saved predictions and checkpoint
+- Training history CSV (with optional grad_norm_data/grad_norm_phys columns)
+- Optional test predictions (`--save-preds`)
+- Best model checkpoint
 
 ## Experiment contract
 

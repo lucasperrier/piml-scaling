@@ -1,5 +1,5 @@
 # Fdb version 4
-["pdflatex"] 1775320762.9323 "/home/lucas-perrier/Documents/projects/scaling-piml/paper/draft.tex" "draft.pdf" "draft" 1775320763.54973 0
+["pdflatex"] 1775339873.11355 "/home/lucas-perrier/Documents/projects/scaling-piml/paper/draft.tex" "draft.pdf" "draft" 1775339873.78731 0
   "../figures-progress/fig_capacity_scaling.pdf" 1775319856.34056 36898 b701dfba5a82bdf741def3eda9d84d36 ""
   "../figures-progress/fig_comparative_data_scaling.pdf" 1775319870.72724 20677 5d3b1bce5d384b8a956bcc523817197a ""
   "../figures-progress/fig_data_scaling.pdf" 1775319857.41785 40203 59e10a3754bbfe4bc3172dd02ee5eee3 ""
@@ -9,7 +9,7 @@
   "../figures-progress/fig_lambda_midpoint.pdf" 1775319868.94732 24702 1f69585170be42ae938ce75fb1b15175 ""
   "../figures-progress/fig_stability_summary.pdf" 1775319859.23645 21334 545507ca3baf76daca6ac62c2bc80ba2 ""
   "/etc/texmf/web2c/texmf.cnf" 1758110158.06058 475 c0e671620eb5563b2130f56340a5fde8 ""
-  "/home/lucas-perrier/Documents/projects/scaling-piml/paper/draft.tex" 1775320762.01698 59964 66e74351dcdcbc17d4ebb5b9ffb67597 ""
+  "/home/lucas-perrier/Documents/projects/scaling-piml/paper/draft.tex" 1775339872.85773 62722 52f26653f04ea98d93d64652d7ea91d1 ""
   "/usr/share/texlive/texmf-dist/fonts/map/fontname/texfonts.map" 1577235249 3524 cb3e574dea2d1052e39280babc910dc8 ""
   "/usr/share/texlive/texmf-dist/fonts/tfm/jknappen/ec/ecrm1095.tfm" 1136768653 3584 929cdff2b7a8c11bd4d49fd68cb0ae70 ""
   "/usr/share/texlive/texmf-dist/fonts/tfm/public/amsfonts/symbols/msam10.tfm" 1246382020 916 f87d7c45f9c908e672703b83b72241a3 ""
@@ -171,9 +171,9 @@
   "/usr/share/texmf/web2c/texmf.cnf" 1707919699 40399 f2c302f7d2af602abb742093540a5834 ""
   "/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map" 1758110161.65648 128028 f533b797fba58d231669ea19e894e23e ""
   "/var/lib/texmf/web2c/pdftex/pdflatex.fmt" 1761856255 6800786 50db678bbcacc90e5312980a2966ddd2 ""
-  "draft.aux" 1775320763.47898 19164 fad59a697ae65af71e45e90bd149dbec "pdflatex"
-  "draft.out" 1775320763.48098 8602 096da7a41949ecf99baad78f367bff6b "pdflatex"
-  "draft.tex" 1775320762.01698 59964 66e74351dcdcbc17d4ebb5b9ffb67597 ""
+  "draft.aux" 1775339873.71448 20494 9502fdfa0bed5be435f67caf112ba1dd "pdflatex"
+  "draft.out" 1775339873.71548 8682 826aa4c3870022cf1178449799f14eb4 "pdflatex"
+  "draft.tex" 1775339872.85773 62722 52f26653f04ea98d93d64652d7ea91d1 ""
   (generated)
   "draft.aux"
   "draft.log"
