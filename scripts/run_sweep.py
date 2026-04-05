@@ -107,7 +107,7 @@ def main() -> None:
     parser.add_argument("--prior-params", type=str, default=None,
                         help="Override system params in physics loss (comma-sep: alpha,beta,delta,gamma)")
     parser.add_argument("--system", type=str, default=None,
-                        choices=["lotka-volterra", "duffing"],
+                        choices=["lotka-volterra", "duffing", "van-der-pol"],
                         help="Override system name in config")
     args = parser.parse_args()
 

@@ -151,6 +151,40 @@ Given an initial condition $\bm{x}_0$ and a fixed prediction horizon $T > 0$, th
 \]
 This formulation provides a well-defined supervised target while avoiding the confounding effects of long autoregressive rollout.
 
+\subsection{Why fixed-horizon flow-map learning is a legitimate task --- and where its limits lie}
+\label{sec:flowmap-legitimacy}
+
+A natural concern is whether fixed-horizon flow-map prediction is itself an ill-posed or irrelevant learning task.
+The literature suggests that it is neither.
+Learning a flow map or evolution operator is an established paradigm in data-driven dynamical systems and operator learning.
+In the dynamical-systems literature, flow map learning has been proposed explicitly as a framework for learning unknown dynamical systems from trajectory data, including partially observed settings where the governing equations are unavailable.
+The central object is the time-$\Delta t$ evolution map taking a state at one time to the state at a later time~\cite{churchill2023fml}.
+Related work extends the same perspective to stochastic systems by learning a stochastic flow-map operator rather than an explicit vector field~\cite{chen2024sfml}.
+
+The task is also standard in neural-operator learning for PDEs.
+Neural operators are designed to learn maps between function spaces, and a canonical time-dependent setting is to map an initial condition, coefficient field, or current solution state to the solution at a later time or next step~\cite{kovachki2023neuralops,li2021fno}.
+For example, Fourier neural operator benchmarks for Burgers and Navier--Stokes are formulated as learning solution operators for time-dependent PDEs rather than identifying the governing equations directly~\cite{li2021fno,kovachki2023neuralops}.
+From this perspective, fixed-horizon flow-map prediction is a legitimate surrogate-modeling task: it asks whether a model can approximate the evolution operator over a prescribed time interval.
+
+However, legitimacy of the task does not imply that every physics prior is well matched to it.
+Our negative midpoint result is better interpreted as a \emph{prior--task mismatch} than as evidence that flow-map learning is itself misguided.
+The target in this paper is a coarse finite-horizon map $\Phi_T : \bm{x}_0 \mapsto \bm{x}(T)$, while the midpoint residual is a local-in-time numerical consistency condition imposed on the endpoints.
+If that discretized residual is biased at the chosen horizon, then the prior can regularize the model toward an incorrect proxy objective even when the supervised task itself is perfectly meaningful.
+
+Recent operator-learning work reinforces this distinction.
+TI-DeepONet explicitly argues that conventional fixed-horizon rollout training can be limited because it predicts full spatiotemporal outputs while disregarding temporal causality, whereas purely autoregressive alternatives accumulate sequential error~\cite{nayak2025tideeponet}.
+This does not invalidate fixed-horizon prediction as a task.
+Rather, it shows that the suitability of the task depends on the scientific question being asked.
+For surrogate modeling of a finite-time evolution operator, fixed-horizon learning is natural.
+For evaluating whether a \emph{local} physics residual improves learning, the task may be poorly aligned unless the residual discretization is accurate at that horizon.
+
+Accordingly, the main methodological lesson of this paper is not that flow-map learning is ill posed.
+It is that one must distinguish between
+(i) whether the supervised task is standard and scientifically meaningful, and
+(ii) whether the chosen physics prior is compatible with that task.
+The literature supports the former.
+Our experiments interrogate the latter.
+
 \subsection{Lotka--Volterra dynamics}
 
 The Lotka--Volterra system is defined by
@@ -1014,6 +1048,31 @@ S.~Wang, X.~Yu, and P.~Perdikaris.
 J.~Willard, X.~Jia, S.~Xu, M.~Steinbach, and V.~Kumar.
 \newblock Integrating scientific knowledge with machine learning for engineering and environmental systems.
 \newblock \emph{ACM Computing Surveys}, 54(4), 2022.
+
+\bibitem{churchill2023fml}
+V.~Churchill and D.~Xiu.
+\newblock Flow map learning for unknown dynamical systems: Overview, implementation, and benchmarks.
+\newblock \emph{Journal of Machine Learning for Modeling and Computing}, 4(2):173--201, 2023.
+
+\bibitem{chen2024sfml}
+Y.~Chen and D.~Xiu.
+\newblock Learning stochastic dynamical system via flow map operator.
+\newblock \emph{Journal of Computational Physics}, 508:112984, 2024.
+
+\bibitem{kovachki2023neuralops}
+N.~Kovachki, S.~Lanthaler, and S.~Mishra et al.
+\newblock Neural operator: Learning maps between function spaces with applications to PDEs.
+\newblock \emph{Journal of Machine Learning Research}, 24(89):1--97, 2023.
+
+\bibitem{li2021fno}
+Z.~Li, N.~Kovachki, K.~Azizzadenesheli, B.~Liu, K.~Bhattacharya, A.~Stuart, and A.~Anandkumar.
+\newblock Fourier neural operator for parametric partial differential equations.
+\newblock In \emph{International Conference on Learning Representations}, 2021.
+
+\bibitem{nayak2025tideeponet}
+D.~Nayak, K.~Yadav, and G.~E. Karniadakis.
+\newblock TI-DeepONet: Learnable time integration for stable long-term extrapolation.
+\newblock arXiv:2505.17341, 2025.
 
 \end{thebibliography}
 

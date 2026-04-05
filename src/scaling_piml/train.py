@@ -15,6 +15,8 @@ from .losses import (
     mse_loss, total_loss, total_loss_conservation, total_loss_composite, total_loss_simpson,
     duffing_physics_loss, duffing_composite_midpoint_loss, duffing_conservation_loss,
     duffing_simpson_loss,
+    vdp_physics_loss, vdp_composite_midpoint_loss, vdp_dissipation_loss,
+    vdp_simpson_loss,
 )
 from .metrics import mse, relative_l2
 from .models.mlp import MLP, parameter_count
@@ -101,7 +103,9 @@ def train_one_run(
     save_yaml(config_path, asdict(cfg))
 
     device = _device()
-    _is_duffing = getattr(cfg.system, "name", "lotka-volterra") == "duffing"
+    _system_name = getattr(cfg.system, "name", "lotka-volterra")
+    _is_duffing = _system_name == "duffing"
+    _is_vdp = _system_name == "van-der-pol"
 
     out_dim = 4 if physics_prior in ("simpson", "simpson-true") else 2
     model = MLP(
@@ -198,6 +202,14 @@ def train_one_run(
                         )
                         L = ld + effective_lambda * lp
                         parts = {"loss": float(L.detach().cpu()), "data": float(ld.detach().cpu()), "phys": float(lp.detach().cpu())}
+                    elif _is_vdp:
+                        ld = mse_loss(pred, y)
+                        lp = vdp_physics_loss(
+                            u0=x_phys, uT_hat=pred_phys, T=cfg.data.T,
+                            mu=cfg.system.mu,
+                        )
+                        L = ld + effective_lambda * lp
+                        parts = {"loss": float(L.detach().cpu()), "data": float(ld.detach().cpu()), "phys": float(lp.detach().cpu())}
                     else:
                         L, parts = total_loss(
                             pred=pred,
@@ -221,6 +233,14 @@ def train_one_run(
                         lp = duffing_conservation_loss(
                             u0=x_phys, uT_hat=pred_phys,
                             alpha=cfg.system.alpha, beta=cfg.system.beta,
+                        )
+                        L = ld + effective_lambda * lp
+                        parts = {"loss": float(L.detach().cpu()), "data": float(ld.detach().cpu()), "phys": float(lp.detach().cpu())}
+                    elif _is_vdp:
+                        ld = mse_loss(pred, y)
+                        lp = vdp_dissipation_loss(
+                            u0=x_phys, uT_hat=pred_phys, T=cfg.data.T,
+                            mu=cfg.system.mu,
                         )
                         L = ld + effective_lambda * lp
                         parts = {"loss": float(L.detach().cpu()), "data": float(ld.detach().cpu()), "phys": float(lp.detach().cpu())}
@@ -253,6 +273,14 @@ def train_one_run(
                         )
                         L = ld + effective_lambda * lp
                         parts = {"loss": float(L.detach().cpu()), "data": float(ld.detach().cpu()), "phys": float(lp.detach().cpu())}
+                    elif _is_vdp:
+                        ld = mse_loss(pred[:, 2:], y)
+                        lp = vdp_composite_midpoint_loss(
+                            u0=x_phys, uT2_hat=pred_T2_phys, uT_hat=pred_T_phys,
+                            T=cfg.data.T, mu=cfg.system.mu,
+                        )
+                        L = ld + effective_lambda * lp
+                        parts = {"loss": float(L.detach().cpu()), "data": float(ld.detach().cpu()), "phys": float(lp.detach().cpu())}
                     else:
                         L, parts = total_loss_composite(
                             pred_full=pred,
@@ -282,6 +310,14 @@ def train_one_run(
                         lp = duffing_simpson_loss(
                             u0=x_phys, uT2_hat=pred_T2_phys, uT_hat=pred_T_phys,
                             T=cfg.data.T, alpha=cfg.system.alpha, beta=cfg.system.beta,
+                        )
+                        L = ld + effective_lambda * lp
+                        parts = {"loss": float(L.detach().cpu()), "data": float(ld.detach().cpu()), "phys": float(lp.detach().cpu())}
+                    elif _is_vdp:
+                        ld = mse_loss(pred[:, 2:], y)
+                        lp = vdp_simpson_loss(
+                            u0=x_phys, uT2_hat=pred_T2_phys, uT_hat=pred_T_phys,
+                            T=cfg.data.T, mu=cfg.system.mu,
                         )
                         L = ld + effective_lambda * lp
                         parts = {"loss": float(L.detach().cpu()), "data": float(ld.detach().cpu()), "phys": float(lp.detach().cpu())}
@@ -354,7 +390,7 @@ def train_one_run(
             if diverged:
                 break
 
-            val_metrics = evaluate(model, val_loader, device, slice_last2=(physics_prior == "simpson"))
+            val_metrics = evaluate(model, val_loader, device, slice_last2=(physics_prior in ("simpson", "simpson-true")))
 
             avg_data = float(sum(data_losses) / max(1, len(data_losses)))
             avg_phys = float(sum(phys_losses) / max(1, len(phys_losses)))

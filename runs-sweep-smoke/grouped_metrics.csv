@@ -1,3 +1,0 @@
-model_name,is_physics_informed,capacity_name,hidden_widths,parameter_count,dataset_size,n_attempted,n_runs,divergence_rate,nan_rate,test_rel_l2_mean,test_rel_l2_std,test_rel_l2_stderr,val_rel_l2_mean,val_rel_l2_std,val_rel_l2_stderr,test_mse_mean,test_mse_std,test_mse_stderr,runtime_seconds_mean,runtime_seconds_std,runtime_seconds_stderr
-piml,True,tiny,"32,32",1218,64,1,1,0.0,0.0,0.33710619807243347,,,0.27026423811912537,,,0.5893296599388123,,,0.009153366088867188,,
-plain,False,tiny,"32,32",1218,64,1,1,0.0,0.0,0.3385539948940277,,,0.2705109715461731,,,0.5868723392486572,,,0.012835264205932617,,

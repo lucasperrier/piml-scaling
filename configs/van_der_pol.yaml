@@ -1,0 +1,37 @@
+system:
+  name: van-der-pol
+  # Van der Pol oscillator: dx/dt = y, dy/dt = mu*(1 - x^2)*y - x
+  mu: 1.0             # nonlinearity parameter (limit cycle for mu > 0)
+
+solver:
+  method: DOP853
+  rtol: 1.0e-9
+  atol: 1.0e-11
+
+data:
+  T: 1.0
+  # IC domain: x0 ∈ [-3, 3], y0 ∈ [-3, 3] (spans inside and outside limit cycle)
+  x0_low: -3.0
+  x0_high: 3.0
+  y0_low: -3.0
+  y0_high: 3.0
+  train_pool: 20000
+  val_size: 2000
+  test_size: 2000
+  dataset_sizes: [64, 128, 256, 512, 1024, 2048, 4096, 8192]
+  data_seeds: [11, 22, 33]
+
+model:
+  activation: relu
+  hidden_widths: [64, 64]
+
+train:
+  lr: 1.0e-3
+  weight_decay: 1.0e-6
+  batch_size_cap: 128
+  max_epochs: 400
+  early_stopping_patience: 40
+  lambda_phys: 0.1
+  train_seeds: [101, 202, 303]
+
+out_dir: runs-vdp

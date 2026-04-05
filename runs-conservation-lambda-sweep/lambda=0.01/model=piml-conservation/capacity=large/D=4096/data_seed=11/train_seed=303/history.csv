@@ -1,1 +1,0 @@
-epoch,train_loss,train_data_loss,train_phys_loss,phys_data_ratio,grad_norm,val_rel_l2,val_mse

@@ -13,7 +13,7 @@ def main() -> None:
     p.add_argument("--out", type=str, default="data")
     p.add_argument("--horizon", type=float, default=None, help="Override data.T (horizon)")
     p.add_argument("--system", type=str, default="lotka-volterra",
-                    choices=["lotka-volterra", "duffing"],
+                    choices=["lotka-volterra", "duffing", "van-der-pol"],
                     help="ODE system to generate data for")
     args = p.parse_args()
 

@@ -5,14 +5,16 @@ from dataclasses import dataclass, field
 
 @dataclass
 class SystemConfig:
-    # System name: "lotka-volterra" or "duffing"
+    # System name: "lotka-volterra", "duffing", or "van-der-pol"
     name: str = "lotka-volterra"
-    # Shared parameters (alpha, beta used by both systems)
+    # Shared parameters (alpha, beta used by LV and Duffing)
     alpha: float = 1.5
     beta: float = 1.0
     # Lotka–Volterra only
     delta: float = 1.0
     gamma: float = 3.0
+    # Van der Pol only
+    mu: float = 1.0
 
 
 @dataclass

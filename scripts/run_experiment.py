@@ -31,7 +31,7 @@ def main() -> None:
     p.add_argument("--lambda-schedule", type=int, default=None, help="Linear ramp-up epochs for lambda_phys")
     p.add_argument("--two-stage", type=int, default=None, help="Data-only epochs before adding physics loss")
     p.add_argument("--save-preds", action="store_true", help="Save test predictions to run directory")
-    p.add_argument("--system", type=str, default=None, choices=["lotka-volterra", "duffing"],
+    p.add_argument("--system", type=str, default=None, choices=["lotka-volterra", "duffing", "van-der-pol"],
                     help="Override system name in config")
     p.add_argument("--obs-noise", type=float, default=0.0,
                     help="Gaussian noise std added to training targets (fraction of per-component std)")

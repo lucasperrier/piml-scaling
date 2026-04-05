@@ -28,7 +28,7 @@ GROUPED_PATH = PROGRESS_DIR / "grouped_metrics.csv"
 SCALING_PATH = PROGRESS_DIR / "scaling_fits.json"
 LOGS_DIR = BASE_DIR / "logs"
 
-MODELS = ["plain", "piml", "piml-simpson"]
+MODELS = ["plain", "piml", "piml-simpson", "piml-simpson-true"]
 TARGET_PER_MODEL = 693
 TARGET_TOTAL = TARGET_PER_MODEL * len(MODELS)
 
@@ -36,6 +36,96 @@ TARGET_TOTAL = TARGET_PER_MODEL * len(MODELS)
 REMOTE_HOST = _os.environ.get("DASHBOARD_REMOTE_HOST", "runpod")
 REMOTE_PROJECT = _os.environ.get("DASHBOARD_REMOTE_PROJECT", "/workspace/projects/piml-scaling")
 REMOTE_RUNS = f"{REMOTE_PROJECT}/{_runs_name}"
+
+# ---------------------------------------------------------------------------
+# All experiment sections with expected run counts
+# ---------------------------------------------------------------------------
+EXPERIMENT_SECTIONS = {
+    "S21 Dense (LV)": {
+        "remote_dir": "runs-dense",
+        "models": ["plain", "piml", "piml-simpson", "piml-simpson-true"],
+        "target_per_model": 693,
+        "worker": "W1",
+    },
+    "S22 Horizon T=0.5": {
+        "remote_dir": "runs-horizon/T=0.5",
+        "models": ["plain", "piml", "piml-simpson"],
+        "target_per_model": 360,
+        "worker": "W2",
+    },
+    "S22 Horizon T=1.0": {
+        "remote_dir": "runs-horizon/T=1.0",
+        "models": ["plain", "piml", "piml-simpson"],
+        "target_per_model": 360,
+        "worker": "W2",
+    },
+    "S22 Horizon T=2.0": {
+        "remote_dir": "runs-horizon/T=2.0",
+        "models": ["plain", "piml", "piml-simpson"],
+        "target_per_model": 360,
+        "worker": "W2",
+    },
+    "S24 Rescue": {
+        "remote_dir": "runs-rescue",
+        "models": None,  # variant-based layout
+        "target_total": 810,
+        "worker": "W4",
+    },
+    "S26 Duffing": {
+        "remote_dir": "runs-duffing",
+        "models": ["plain", "piml", "piml-simpson", "piml-conservation"],
+        "target_per_model": 360,
+        "worker": "W3",
+    },
+    "S27 Noise σ=0.0": {
+        "remote_dir": "runs-noise/obs/sigma=0.0",
+        "models": ["plain", "piml", "piml-simpson"],
+        "target_per_model": 360,
+        "worker": "W4",
+    },
+    "S27 Noise σ=0.01": {
+        "remote_dir": "runs-noise/obs/sigma=0.01",
+        "models": ["plain", "piml", "piml-simpson"],
+        "target_per_model": 360,
+        "worker": "W4",
+    },
+    "S27 Noise σ=0.05": {
+        "remote_dir": "runs-noise/obs/sigma=0.05",
+        "models": ["plain", "piml", "piml-simpson"],
+        "target_per_model": 360,
+        "worker": "W4",
+    },
+    "S27 Noise σ=0.1": {
+        "remote_dir": "runs-noise/obs/sigma=0.1",
+        "models": ["plain", "piml", "piml-simpson"],
+        "target_per_model": 360,
+        "worker": "W4",
+    },
+    "S27 Mismatch δ=0.05": {
+        "remote_dir": "runs-noise/mismatch/delta=0.05",
+        "models": ["piml", "piml-simpson"],
+        "target_per_model": 360,
+        "worker": "W4",
+    },
+    "S27 Mismatch δ=0.10": {
+        "remote_dir": "runs-noise/mismatch/delta=0.10",
+        "models": ["piml", "piml-simpson"],
+        "target_per_model": 360,
+        "worker": "W4",
+    },
+    "S27 Mismatch δ=0.20": {
+        "remote_dir": "runs-noise/mismatch/delta=0.20",
+        "models": ["piml", "piml-simpson"],
+        "target_per_model": 360,
+        "worker": "W4",
+    },
+    "S28 Grad Dynamics": {
+        "remote_dir": "runs-grad-dynamics",
+        "models": None,
+        "target_total": 48,
+        "worker": "W4",
+    },
+}
 
 st.set_page_config(page_title="Scaling-PIML Dashboard", layout="wide")
 
@@ -60,10 +150,10 @@ def _ssh_cmd(cmd: str, timeout: int = 10) -> str | None:
 
 @st.cache_data(ttl=8)
 def _remote_model_counts() -> dict[str, int]:
-    """Get per-model completed run counts from the pod."""
+    """Get per-model completed run counts from the pod (dense sweep only)."""
     out = _ssh_cmd(
         f"cd {REMOTE_PROJECT} && "
-        f"for m in plain piml piml-simpson; do "
+        f"for m in plain piml piml-simpson piml-simpson-true; do "
         f"  c=$(find {REMOTE_RUNS}/model=$m -name metrics.json 2>/dev/null | wc -l); "
         f'  echo "$m $c"; '
         f"done"
@@ -75,6 +165,34 @@ def _remote_model_counts() -> dict[str, int]:
             if len(parts) == 2:
                 counts[parts[0]] = int(parts[1])
     return counts
+
+
+@st.cache_data(ttl=10)
+def _remote_all_section_counts() -> dict[str, dict]:
+    """Get run counts for ALL experiment sections in one SSH call."""
+    # Build a single find command for all sections
+    cmds = []
+    for name, sec in EXPERIMENT_SECTIONS.items():
+        rdir = sec["remote_dir"]
+        cmds.append(
+            f'c=$(find {REMOTE_PROJECT}/{rdir} -name metrics.json 2>/dev/null | wc -l); echo "{name}|$c"'
+        )
+    full_cmd = " && ".join(cmds)
+    out = _ssh_cmd(full_cmd, timeout=20)
+    results: dict[str, dict] = {}
+    if out:
+        for line in out.splitlines():
+            if "|" in line:
+                parts = line.split("|", 1)
+                name = parts[0].strip()
+                count = int(parts[1].strip())
+                sec = EXPERIMENT_SECTIONS.get(name, {})
+                if sec.get("models") and sec.get("target_per_model"):
+                    target = len(sec["models"]) * sec["target_per_model"]
+                else:
+                    target = sec.get("target_total", 0)
+                results[name] = {"completed": count, "target": target, "worker": sec.get("worker", "?")}
+    return results
 
 
 @st.cache_data(ttl=8)
@@ -123,27 +241,41 @@ def _remote_gpu_stats() -> dict:
 
 
 @st.cache_data(ttl=8)
-def _remote_log_tail(n: int = 40) -> tuple[str, str]:
-    """Get the tail of the latest log from the pod. Returns (filename, content)."""
+def _remote_log_tail(n: int = 30) -> dict[str, str]:
+    """Get the tail of each worker log from the pod. Returns {label: content}."""
     out = _ssh_cmd(
         f"cd {REMOTE_PROJECT} && "
-        f"f=$(ls -1t logs/master_*.log logs/step21_*.log logs/step21_full_*.log 2>/dev/null | head -n 1); "
-        f'[ -n "$f" ] && echo "FILE:$f" && tail -n {n} "$f" || echo "FILE:none"',
-        timeout=10,
+        f"for f in $(ls -1t logs/worker*.log 2>/dev/null | head -n 4); do "
+        f'  echo "===FILE:$f==="; tail -n {n} "$f"; '
+        f"done; "
+        f"if [ -z \"$(ls logs/worker*.log 2>/dev/null)\" ]; then "
+        f"  f=$(ls -1t logs/master_*.log logs/step21_*.log 2>/dev/null | head -n 1); "
+        f'  [ -n "$f" ] && echo "===FILE:$f===" && tail -n {n} "$f"; '
+        f"fi",
+        timeout=15,
     )
+    logs: dict[str, str] = {}
     if out:
-        lines = out.splitlines()
-        fname = lines[0].replace("FILE:", "") if lines else "none"
-        content = "\n".join(lines[1:]) if len(lines) > 1 else "(empty)"
-        return fname, content
-    return "unreachable", "(SSH connection failed)"
+        chunks = out.split("===FILE:")
+        for chunk in chunks:
+            if not chunk.strip():
+                continue
+            if "===" in chunk:
+                fname, content = chunk.split("===", 1)
+                logs[fname.strip()] = content.strip() or "(empty)"
+    if not logs:
+        logs["(no logs)"] = "(SSH connection failed or no log files found)"
+    return logs
 
 
 @st.cache_data(ttl=8)
 def _remote_process_check() -> str:
-    """Check if a sweep or master process is running on the pod."""
-    out = _ssh_cmd("ps -eo pid,etime,args | grep -E 'run_all_gpu|run_sweep|run_experiment' | grep -v grep | head -n 5")
-    return out or "(no active sweep process)"
+    """Check if sweep/worker processes are running on the pod."""
+    out = _ssh_cmd(
+        "ps -eo pid,etime,args | grep -E 'run_all_gpu|run_sweep|run_experiment|run_horizon|run_rescue|worker[0-9]' "
+        "| grep -v grep | head -n 20"
+    )
+    return out or "(no active sweep processes)"
 
 
 @st.cache_data(ttl=30)
@@ -346,20 +478,27 @@ with st.sidebar:
 
 # ===== LIVE MONITOR TAB =====
 if dashboard_mode == "Live Monitor":
+    section_counts = _remote_all_section_counts()
+    total_completed = sum(s["completed"] for s in section_counts.values())
+    total_target = sum(s["target"] for s in section_counts.values())
+    if total_target == 0:
+        total_target = 1  # avoid division by zero
+
+    # Also get dense-specific model counts for backward compat
     model_counts = _remote_model_counts()
-    completed_runs = sum(model_counts.values())
+
     ts_summary = _remote_run_timestamps_summary()
-    eta = _estimate_eta_from_summary(completed_runs, TARGET_TOTAL, ts_summary)
+    eta = _estimate_eta_from_summary(total_completed, total_target, ts_summary)
 
     # ---- Top KPI row ----
     k1, k2, k3, k4 = st.columns(4)
-    k1.metric("Total Progress", f"{completed_runs} / {TARGET_TOTAL}")
-    k2.metric("Completion", f"{100 * completed_runs / TARGET_TOTAL:.1f}%")
+    k1.metric("Total Progress", f"{total_completed} / {total_target}")
+    k2.metric("Completion", f"{100 * total_completed / total_target:.1f}%")
     k3.metric("ETA", eta)
     gpu = _remote_gpu_stats()
     k4.metric("GPU", f"{gpu.get('name', 'N/A')}")
 
-    st.progress(min(completed_runs / TARGET_TOTAL, 1.0))
+    st.progress(min(total_completed / total_target, 1.0))
 
     # ---- GPU gauges ----
     if gpu:
@@ -372,40 +511,84 @@ if dashboard_mode == "Live Monitor":
     else:
         st.warning("GPU stats unavailable — check pod connectivity.")
 
-    # ---- Per-model progress bars ----
-    st.subheader("Per-Model Progress")
-    cols = st.columns(len(MODELS))
-    for i, m in enumerate(MODELS):
-        c = model_counts.get(m, 0)
-        pct = c / TARGET_PER_MODEL if TARGET_PER_MODEL else 0
-        cols[i].metric(m, f"{c} / {TARGET_PER_MODEL}")
-        cols[i].progress(min(pct, 1.0))
+    # ---- Per-Worker Summary ----
+    st.subheader("Worker Overview")
+    worker_agg: dict[str, dict] = {}
+    for name, info in section_counts.items():
+        w = info["worker"]
+        if w not in worker_agg:
+            worker_agg[w] = {"completed": 0, "target": 0, "sections": []}
+        worker_agg[w]["completed"] += info["completed"]
+        worker_agg[w]["target"] += info["target"]
+        worker_agg[w]["sections"].append(name)
+
+    WORKER_LABELS = {
+        "W1": "Dense Sweep (LV)",
+        "W2": "Horizon Sweep",
+        "W3": "Duffing System",
+        "W4": "Rescue / Noise / Grad",
+    }
+    wcols = st.columns(len(worker_agg) if worker_agg else 1)
+    for i, (wid, wagg) in enumerate(sorted(worker_agg.items())):
+        wt = wagg["target"] or 1
+        pct = wagg["completed"] / wt
+        with wcols[i]:
+            st.markdown(f"**{wid}: {WORKER_LABELS.get(wid, '')}**")
+            st.metric("Runs", f"{wagg['completed']} / {wagg['target']}")
+            st.progress(min(pct, 1.0))
+
+    # ---- Per-Section Progress Table ----
+    st.subheader("Experiment Sections")
+    sec_rows = []
+    for name, info in section_counts.items():
+        t = info["target"] or 1
+        pct = info["completed"] / t
+        sec_rows.append({
+            "Section": name,
+            "Worker": info["worker"],
+            "Completed": info["completed"],
+            "Target": info["target"],
+            "Progress": f"{100 * pct:.1f}%",
+        })
+    if sec_rows:
+        sec_df = pd.DataFrame(sec_rows)
+        st.dataframe(sec_df, width="stretch", hide_index=True)
+
+    # ---- Dense sweep model breakdown ----
+    if model_counts:
+        st.subheader("Dense Sweep: Per-Model Breakdown")
+        cols = st.columns(len(MODELS))
+        for i, m in enumerate(MODELS):
+            c = model_counts.get(m, 0)
+            pct = c / TARGET_PER_MODEL if TARGET_PER_MODEL else 0
+            cols[i].metric(m, f"{c} / {TARGET_PER_MODEL}")
+            cols[i].progress(min(pct, 1.0))
+
+    # ---- Capacity breakdown heatmap (dense only) ----
+    with st.expander("Dense Sweep: Capacity Grid", expanded=False):
+        cap_df = _remote_capacity_grid()
+        if not cap_df.empty:
+            pivot = cap_df.pivot_table(index="model", columns="capacity", values="completed", fill_value=0)
+            fig_grid = go.Figure(data=go.Heatmap(
+                z=pivot.values,
+                x=[str(c) for c in pivot.columns],
+                y=[str(r) for r in pivot.index],
+                text=pivot.values.astype(int).astype(str),
+                texttemplate="%{text}",
+                colorscale="Greens",
+                showscale=False,
+            ))
+            fig_grid.update_layout(
+                title="Completed runs per cell",
+                xaxis_title="Capacity",
+                yaxis_title="Model",
+                height=250,
+            )
+            st.plotly_chart(fig_grid, width="stretch")
 
     # ---- Process status ----
-    st.subheader("Active Process")
+    st.subheader("Active Processes")
     st.code(_remote_process_check(), language="text")
-
-    # ---- Capacity breakdown heatmap ----
-    st.subheader("Progress Grid (model × capacity)")
-    cap_df = _remote_capacity_grid()
-    if not cap_df.empty:
-        pivot = cap_df.pivot_table(index="model", columns="capacity", values="completed", fill_value=0)
-        fig_grid = go.Figure(data=go.Heatmap(
-            z=pivot.values,
-            x=[str(c) for c in pivot.columns],
-            y=[str(r) for r in pivot.index],
-            text=pivot.values.astype(int).astype(str),
-            texttemplate="%{text}",
-            colorscale="Greens",
-            showscale=False,
-        ))
-        fig_grid.update_layout(
-            title="Completed runs per cell",
-            xaxis_title="Capacity",
-            yaxis_title="Model",
-            height=250,
-        )
-        st.plotly_chart(fig_grid, use_container_width=True)
 
     # ---- Completion timeline ----
     recent_ts = ts_summary.get("recent_20", [])
@@ -417,11 +600,12 @@ if dashboard_mode == "Live Monitor":
         r1.metric("Avg seconds/run (recent)", f"{avg_sec:.1f}s")
         r2.metric("Runs/hour (recent)", f"{3600 / avg_sec:.0f}" if avg_sec > 0 else "N/A")
 
-    # ---- Log tail ----
-    st.subheader("Live Log")
-    log_name, log_content = _remote_log_tail(n=40)
-    st.caption(f"`{log_name}`")
-    st.code(log_content, language="text")
+    # ---- Worker Logs ----
+    st.subheader("Worker Logs")
+    worker_logs = _remote_log_tail(n=30)
+    for log_file, log_content in worker_logs.items():
+        with st.expander(f"{log_file}", expanded=len(worker_logs) <= 2):
+            st.code(log_content, language="text")
 
     st.caption(f"Last refresh: {datetime.now(timezone.utc).strftime('%H:%M:%S UTC')}  •  Polling: `{REMOTE_HOST}`")
     st.stop()

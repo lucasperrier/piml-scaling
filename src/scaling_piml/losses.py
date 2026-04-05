@@ -436,3 +436,118 @@ def duffing_simpson_loss(
     F_T = _duffing_vector_field(uT_hat, **kw)
     r = uT_hat - u0 - (T / 6.0) * (F0 + 4.0 * F_mid + F_T)
     return torch.mean(torch.sum(r**2, dim=1))
+
+
+# ===========================================================================
+# Van der Pol oscillator losses
+# ===========================================================================
+
+def _vdp_vector_field(
+    u: torch.Tensor,
+    *,
+    mu: float,
+) -> torch.Tensor:
+    """Evaluate the Van der Pol oscillator vector field F(u).
+
+    u: (B, 2).  System: dx/dt = y, dy/dt = mu*(1 - x^2)*y - x
+    Returns: (B, 2)
+    """
+    x = u[:, 0]
+    y = u[:, 1]
+    dx = y
+    dy = mu * (1.0 - x**2) * y - x
+    return torch.stack([dx, dy], dim=1)
+
+
+def vdp_physics_loss(
+    *,
+    u0: torch.Tensor,
+    uT_hat: torch.Tensor,
+    T: float,
+    mu: float,
+) -> torch.Tensor:
+    """Implicit midpoint residual loss for the Van der Pol oscillator."""
+    mid = 0.5 * (uT_hat + u0)
+    f_mid = _vdp_vector_field(mid, mu=mu)
+    r = uT_hat - u0 - T * f_mid
+    return torch.mean(torch.sum(r**2, dim=1))
+
+
+def vdp_composite_midpoint_loss(
+    *,
+    u0: torch.Tensor,
+    uT2_hat: torch.Tensor,
+    uT_hat: torch.Tensor,
+    T: float,
+    mu: float,
+) -> torch.Tensor:
+    """Composite 2-step midpoint ODE residual for Van der Pol."""
+    h = T / 2.0
+
+    mid_a = 0.5 * (u0 + uT2_hat)
+    r_a = uT2_hat - u0 - h * _vdp_vector_field(mid_a, mu=mu)
+
+    mid_b = 0.5 * (uT2_hat + uT_hat)
+    r_b = uT_hat - uT2_hat - h * _vdp_vector_field(mid_b, mu=mu)
+
+    return torch.mean(torch.sum(r_a**2, dim=1)) + torch.mean(torch.sum(r_b**2, dim=1))
+
+
+def vdp_dissipation_loss(
+    *,
+    u0: torch.Tensor,
+    uT_hat: torch.Tensor,
+    T: float,
+    mu: float,
+) -> torch.Tensor:
+    r"""Dissipation-rate prior for the Van der Pol oscillator.
+
+    The instantaneous energy is E = (x^2 + y^2) / 2.  Its time derivative
+    along trajectories of the Van der Pol system is:
+
+        dE/dt = x * dx/dt + y * dy/dt
+              = x * y + y * [mu*(1-x^2)*y - x]
+              = mu * (1 - x^2) * y^2
+
+    This conserved relationship holds exactly at every point.  We enforce it
+    at the midpoint of the predicted trajectory segment as a soft constraint:
+
+        midpoint = (u0 + uT_hat) / 2
+        Delta_E  = E(uT_hat) - E(u0)
+        approx   = T * mu * (1 - x_mid^2) * y_mid^2
+
+    Loss = mean( (Delta_E - approx)^2 )
+
+    This is exact for the continuous system and low-order accurate for the
+    discrete approximation (same spirit as the midpoint-rule residual).  It is
+    analogous to the conservation-law loss on LV/Duffing: an exact structural
+    constraint that is low-information (does not fully constrain the trajectory).
+    """
+    E0 = 0.5 * torch.sum(u0**2, dim=1)
+    ET = 0.5 * torch.sum(uT_hat**2, dim=1)
+    delta_E = ET - E0
+
+    mid = 0.5 * (u0 + uT_hat)
+    x_mid = mid[:, 0]
+    y_mid = mid[:, 1]
+
+    # Midpoint approximation of the integral of dE/dt over [0, T]
+    approx = T * mu * (1.0 - x_mid**2) * y_mid**2
+
+    return torch.mean((delta_E - approx) ** 2)
+
+
+def vdp_simpson_loss(
+    *,
+    u0: torch.Tensor,
+    uT2_hat: torch.Tensor,
+    uT_hat: torch.Tensor,
+    T: float,
+    mu: float,
+) -> torch.Tensor:
+    """Simpson's 1/3-rule ODE residual loss for the Van der Pol oscillator (4th-order)."""
+    F0 = _vdp_vector_field(u0, mu=mu)
+    F_mid = _vdp_vector_field(uT2_hat, mu=mu)
+    F_T = _vdp_vector_field(uT_hat, mu=mu)
+    r = uT_hat - u0 - (T / 6.0) * (F0 + 4.0 * F_mid + F_T)
+    return torch.mean(torch.sum(r**2, dim=1))

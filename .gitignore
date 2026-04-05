@@ -21,12 +21,23 @@ build/
 
 # Logs & artifacts
 runs/
+runs-*/
 artifacts/
 outputs/
+diagnostic_*.json
 
 # Data
 /data/
 /data-*/
+
+# LaTeX build artifacts
+*.aux
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.synctex.gz
+*.pdf
 
 # OS
 .DS_Store

@@ -8,6 +8,7 @@ import numpy as np
 from ..config import DataConfig, ODESolverConfig, SystemConfig
 from ..systems.lotka_volterra import lotka_volterra_rhs
 from ..systems.duffing import duffing_rhs
+from ..systems.van_der_pol import van_der_pol_rhs
 from ..systems.ode import solve_flow_map
 from ..utils.io import ensure_dir, save_json
 from ..utils.seed import seed_everything
@@ -52,6 +53,12 @@ def generate_dataset_for_seed(
                 t, u,
                 alpha=system.alpha,
                 beta=system.beta,
+            )
+    elif system_name == "van-der-pol":
+        def rhs(t: float, u: np.ndarray) -> np.ndarray:
+            return van_der_pol_rhs(
+                t, u,
+                mu=system.mu,
             )
     else:
         def rhs(t: float, u: np.ndarray) -> np.ndarray:
