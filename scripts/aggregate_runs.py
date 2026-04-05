@@ -73,6 +73,13 @@ def _infer_from_path(metrics_path: Path) -> dict[str, Any]:
             inferred.setdefault("train_seed", int(part.split("=", 1)[1]))
         elif part.startswith("model="):
             inferred.setdefault("model_name", part.split("=", 1)[1])
+        elif part.startswith("task="):
+            inferred.setdefault("task_name", part.split("=", 1)[1])
+        elif part.startswith("dt="):
+            inferred.setdefault("dt", float(part.split("=", 1)[1]))
+    # Default task/dt for legacy flow-map runs
+    inferred.setdefault("task_name", "flowmap")
+    inferred.setdefault("dt", None)
     return inferred
 
 
@@ -101,6 +108,9 @@ def _group_records(df: pd.DataFrame) -> pd.DataFrame:
         "parameter_count",
         "dataset_size",
     ]
+    # Include task_name and dt in grouping when present
+    if "task_name" in df.columns:
+        group_keys = ["task_name", "dt"] + group_keys
 
     rows: list[dict[str, Any]] = []
     for keys, group in df.groupby(group_keys, dropna=False):

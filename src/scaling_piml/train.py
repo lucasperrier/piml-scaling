@@ -17,6 +17,7 @@ from .losses import (
     duffing_simpson_loss,
     vdp_physics_loss, vdp_composite_midpoint_loss, vdp_dissipation_loss,
     vdp_simpson_loss,
+    trapezoidal_physics_loss, duffing_trapezoidal_physics_loss, vdp_trapezoidal_physics_loss,
 )
 from .metrics import mse, relative_l2
 from .models.mlp import MLP, parameter_count
@@ -336,6 +337,36 @@ def train_one_run(
                             gamma=cfg.system.gamma,
                             lambda_phys=effective_lambda,
                         )
+                    losses.append(parts["loss"])
+                    data_losses.append(parts["data"])
+                    phys_losses.append(parts["phys"])
+                elif physics_prior == "trapezoidal":
+                    x_phys, _, pred_phys = _physical_batch(train_loader, x, y, pred)
+                    if _is_duffing:
+                        ld = mse_loss(pred, y)
+                        lp = duffing_trapezoidal_physics_loss(
+                            u0=x_phys, uT_hat=pred_phys, T=cfg.data.T,
+                            alpha=cfg.system.alpha, beta=cfg.system.beta,
+                        )
+                        L = ld + effective_lambda * lp
+                        parts = {"loss": float(L.detach().cpu()), "data": float(ld.detach().cpu()), "phys": float(lp.detach().cpu())}
+                    elif _is_vdp:
+                        ld = mse_loss(pred, y)
+                        lp = vdp_trapezoidal_physics_loss(
+                            u0=x_phys, uT_hat=pred_phys, T=cfg.data.T,
+                            mu=cfg.system.mu,
+                        )
+                        L = ld + effective_lambda * lp
+                        parts = {"loss": float(L.detach().cpu()), "data": float(ld.detach().cpu()), "phys": float(lp.detach().cpu())}
+                    else:
+                        ld = mse_loss(pred, y)
+                        lp = trapezoidal_physics_loss(
+                            u0=x_phys, uT_hat=pred_phys, T=cfg.data.T,
+                            alpha=cfg.system.alpha, beta=cfg.system.beta,
+                            delta=cfg.system.delta, gamma=cfg.system.gamma,
+                        )
+                        L = ld + effective_lambda * lp
+                        parts = {"loss": float(L.detach().cpu()), "data": float(ld.detach().cpu()), "phys": float(lp.detach().cpu())}
                     losses.append(parts["loss"])
                     data_losses.append(parts["data"])
                     phys_losses.append(parts["phys"])

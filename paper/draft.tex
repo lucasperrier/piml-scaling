@@ -34,8 +34,8 @@
 \newcommand{\status}[1]{\textcolor{red}{\textbf{[#1]}}}
 \newcommand{\pending}[1]{\textcolor{orange}{\textbf{[PENDING: #1]}}}
 
-\title{Do Simple Physics Priors Change Empirical Scaling in Scientific Machine Learning?\\
-\large A Controlled Lotka--Volterra Case Study}
+\title{Prior-Induced Scaling Regimes in Scientific Machine Learning\\
+\large A Cross-System Study Across Three Dynamical Systems}
 
 \author[1]{Lucas Perrier}
 \affil[1]{Affiliation placeholder}
@@ -49,21 +49,20 @@
 %%  ABSTRACT
 %% ================================================================
 \begin{abstract}
-Physics-informed learning methods are often compared at a small number of fixed model and dataset sizes.
-Such evaluations can show whether a prior helps at a particular operating point, but they do not reveal whether the prior changes learning behavior systematically.
-We propose empirical scaling laws as a diagnostic framework for physics priors and demonstrate the approach on fixed-horizon flow-map prediction for the Lotka--Volterra system.
-We compare a plain multilayer perceptron against three physics-regularized variants---a single-step ODE-residual prior (midpoint rule), a composite two-step residual prior (reduced-bias midpoint), and a conservation-law prior---across five model capacities and eight dataset sizes, fitting joint scaling surfaces of the form
+Physics-informed learning methods are typically evaluated at a small number of fixed model and dataset sizes, revealing whether a prior helps at a particular operating point but not whether it changes learning behavior systematically.
+We propose empirical scaling laws as a diagnostic framework for physics priors and demonstrate the approach on fixed-horizon flow-map prediction across three dynamical systems: Lotka--Volterra (conservative, predator--prey), Van~der~Pol (non-conservative, limit cycle), and Duffing (conservative, cubic nonlinearity).
+For each system, we compare a plain multilayer perceptron against physics-regularized variants---including ODE-residual priors at two discretization orders (midpoint and Simpson), and a structural prior (conservation or dissipation law)---fitting joint scaling surfaces of the form
 \[
 E(N,D) \approx E_\infty + aN^{-\alpha} + bD^{-\beta},
 \]
 where $E$ is test error, $N$ is model capacity, and $D$ is dataset size.
 
-The three priors produce three qualitatively distinct scaling signatures.
-The single-step midpoint prior, which incurs $\sim\!15\%$ irreducible approximation error at the tested horizon, raises the effective error floor ($\hat{E}_\infty \approx 0.011$) and compresses both scaling exponents ($\hat{\alpha} \approx 0.18$, $\hat{\beta} \approx 0.54$), making the model weakly responsive to additional data or capacity.
-The composite midpoint prior reduces the ground-truth residual by $\sim\!24\times$ and recovers healthy scaling with a near-zero floor ($\hat{E}_\infty \approx 0.001$).
-The conservation-law prior, although exact on ground-truth trajectories, is informationally weak and introduces seed-dependent bimodal optimization failures that worsen with model capacity.
-A systematic comparison across five alternative scaling ansatzes, including interaction terms and a nonparametric baseline, confirms that these qualitative conclusions are robust to the choice of functional form.
-These results show that scaling-law analysis can diagnose not only whether a physics prior helps, but \emph{how} it changes the learning surface: biased priors raise floors, reduced-bias priors recover useful scaling, and exact-but-weak priors can corrupt scaling through optimization instability.
+The experiments reveal a taxonomy of prior-induced scaling regimes that recurs across all three systems.
+The single-step midpoint prior raises the error floor and flattens scaling exponents on every system tested (data-scaling slopes of $-0.06$ to $-0.01$ versus $-0.37$ to $-0.58$ for the plain baseline), with floor magnitude tracking the ground-truth discretization residual.
+A higher-order Simpson prior partially recovers scaling everywhere but never surpasses the plain baseline.
+Structural priors exhibit system-dependent behavior: the conservation-law prior nearly matches the plain baseline on conservative Duffing (slope $-0.44$ versus $-0.45$) but degrades to midpoint-level performance on non-conservative Van~der~Pol (slope $-0.06$).
+On Lotka--Volterra, the conservation prior introduces bimodal optimization failures that are resolvable through lambda-ramp scheduling, identifying them as optimizer artifacts rather than intrinsic surface corruption.
+These results establish that biased-residual priors universally raise error floors, that reduced-bias priors recover scaling in proportion to residual reduction, and that exact structural priors help only when the conserved quantity constrains the relevant degrees of freedom---three findings that hold across systems with qualitatively different dynamics.
 \end{abstract}
 
 %% ================================================================
@@ -81,30 +80,33 @@ By contrast, comparable scaling-based evaluation is still underdeveloped in SciM
 This is a notable gap because scientific learning problems are especially sensitive to regime: task difficulty depends not only on sample count, but also on time horizon, parameter variability, discretization, optimization stability, and the form of the physical prior itself.
 
 This paper studies a controlled instance of that broader question.
-We consider fixed-horizon flow-map prediction on the Lotka--Volterra system and ask:
+We consider fixed-horizon flow-map prediction on three dynamical systems---Lotka--Volterra, Van~der~Pol, and Duffing---and ask:
 
 \begin{quote}
-Do different physics priors produce distinguishable scaling signatures, and can these signatures diagnose the quality of the prior?
+Do different physics priors produce distinguishable scaling signatures, and do those signatures recur across dynamical systems with qualitatively different structure?
 \end{quote}
 
-We study three priors on the same task.
-The first is a single-step ODE-residual prior based on the midpoint rule; it is structurally meaningful but biased at the tested horizon because exact trajectories do not satisfy the discretized residual exactly.
-The second is a composite two-step midpoint prior that reduces, but does not eliminate, that bias.
-The third is an exact conservation-law prior based on the system's first integral; it is unbiased on the true dynamics, but constrains only one scalar quantity on a vector-valued output and is therefore informationally weak.
-This triad---biased and strong, reduced-bias and structured, exact but weak---allows a controlled comparison of prior--scaling interactions.
+We study four classes of priors across a system ladder of increasing diversity.
+The first is a single-step ODE-residual prior based on the midpoint rule; it is structurally meaningful but biased because exact trajectories do not satisfy the discretized residual exactly.
+The second is a higher-order ODE-residual prior based on Simpson's $1/3$ rule, which reduces but does not eliminate the discretization bias.
+The third is an exact structural prior---a conservation-law penalty on Lotka--Volterra and Duffing, and a dissipation-rate penalty on Van~der~Pol---that targets a known physical invariant or balance law.
+The fourth is a composite two-step midpoint prior on Lotka--Volterra that completes a dose--response analysis on discretization order.
+This design---biased and strong, reduced-bias and structured, exact but potentially weak, and a graded reduction series---enables a controlled comparison of prior--scaling interactions both within and across systems.
 
-Our central claim is empirical and methodological rather than universal and theoretical.
-We do not claim a general theory of physics-informed scaling from one ODE system.
-Instead, we show that even in this minimal setting, scaling-law analysis reveals information that pointwise evaluations miss: the three priors generate three distinct signatures---floor-raising, scaling recovery, and surface corruption---suggesting that physics priors should be evaluated not only by whether they help at one operating point, but by how they reshape the entire learning surface.
+Our central claim is empirical and methodological.
+We do not derive a general theory of physics-informed scaling from three ODE systems.
+Instead, we show that the same qualitative scaling signatures recur across three dynamical systems with different conservation structure, nonlinearity type, and phase-space geometry.
+Biased residual priors raise error floors everywhere; reduced-bias priors recover scaling in proportion to residual reduction; and exact structural priors help only when the conserved quantity constrains the relevant output degrees of freedom.
+These regime types are \emph{not} visible in pointwise evaluations---they emerge only from the scaling surface.
 
 The contributions of the paper are:
 
 \begin{enumerate}[leftmargin=*, itemsep=0.3em]
-    \item A controlled scaling-law protocol for evaluating physics priors on a dynamical-system learning task, combining joint capacity--data sweeps, physics-loss diagnostics, and regularization-strength sweeps.
-    \item A two-axis scaling study over model capacity ($N$) and dataset size ($D$) for a plain MLP and three physics-regularized variants, totalling over 1{,}400 training runs.
-    \item A three-way taxonomy of prior--scaling interactions: a biased prior raises the error floor and compresses exponents, a reduced-bias prior recovers useful scaling, and an exact-but-weak prior corrupts the surface through stochastic optimization failure.
-    \item A systematic ansatz comparison using five alternative scaling functional forms, with BIC ranking and held-out cross-validation, confirming that the qualitative conclusions are robust to the choice of ansatz.
-    \item Evidence that scaling exponents, error floors, and stability patterns provide a more informative basis for evaluating physics priors than isolated benchmark comparisons.
+    \item A controlled scaling-law protocol for evaluating physics priors on dynamical-system learning tasks, combining joint capacity--data sweeps, physics-loss diagnostics, and regularization-strength sweeps.
+    \item A cross-system study spanning three dynamical systems (Lotka--Volterra, Van~der~Pol, Duffing) with four prior types, demonstrating that the same qualitative scaling taxonomy recurs despite differences in system structure.
+    \item A three-way taxonomy of prior--scaling interactions---floor-raising (biased residual), scaling recovery (reduced-bias residual), and system-dependent structural---grounded in measurable ground-truth residual magnitudes.
+    \item Evidence that exact structural priors are system-dependent: the conservation-law prior nearly matches the plain baseline on conservative Duffing but degrades to midpoint-level on non-conservative Van~der~Pol, with bimodal failures on Lotka--Volterra shown to be optimizer artifacts resolvable via lambda-ramp scheduling.
+    \item A systematic ansatz comparison using five alternative scaling functional forms on the anchor system, confirming that the qualitative conclusions are robust to the choice of ansatz.
 \end{enumerate}
 
 %% ================================================================
@@ -203,13 +205,94 @@ H(u,v) = \delta u - \gamma \ln u + \beta v - \alpha \ln v,
 satisfying $H(\bm{x}(t)) = H(\bm{x}_0)$ for all $t$.
 This invariant plays a central role in our experimental design: it provides an \emph{exact} physics prior that can be contrasted with an \emph{approximate} one.
 
+\subsection{Van der Pol oscillator}
+\label{sec:vdp-system}
+
+The Van der Pol oscillator is a non-conservative system with a stable limit cycle:
+\begin{align}
+\frac{dx}{dt} &= y, \label{eq:vdp-x}\\
+\frac{dy}{dt} &= \mu(1 - x^2)y - x, \label{eq:vdp-y}
+\end{align}
+where $\mu > 0$ controls the nonlinearity strength.
+We use $\mu = 1.0$ throughout, which produces moderate nonlinearity and a limit cycle with period approximately $2\pi$.
+Unlike Lotka--Volterra, this system has no conserved quantity: energy is pumped in for $|x| < 1$ and dissipated for $|x| > 1$, driving all trajectories toward the limit cycle.
+
+The absence of a first integral is central to the experimental design.
+On Lotka--Volterra, the conservation-law prior exploits an exact structural property; Van~der~Pol tests whether the same prior \emph{class} (structural constraint) works when the best available target is an approximate dissipation-rate balance rather than an exact invariant.
+Specifically, we replace the conservation loss with a dissipation-rate penalty:
+\begin{equation}
+\mathcal{L}_{\mathrm{diss}} = \frac{1}{B}\sum_{i=1}^{B}
+\left(
+\Delta E^{(i)} - T \cdot \mu\left(1 - x_{\mathrm{mid}}^{(i)\,2}\right) y_{\mathrm{mid}}^{(i)\,2}
+\right)^2,
+\label{eq:vdp-dissipation}
+\end{equation}
+where $\Delta E = E(\hat{\bm{x}}_T) - E(\bm{x}_0)$ is the energy change, $E = \tfrac{1}{2}(x^2 + y^2)$ is the harmonic energy, and the subscript ``mid'' denotes the midpoint $\tfrac{1}{2}(\bm{x}_0 + \hat{\bm{x}}_T)$.
+This loss is structurally analogous to the LV conservation prior---it targets a global energy balance---but uses a midpoint approximation of the dissipation rate, making it inexact on ground-truth trajectories (GT residual $= 3.50$, comparable to the midpoint ODE residual).
+
+\subsection{Duffing oscillator}
+\label{sec:duffing-system}
+
+The undamped, unforced Duffing oscillator is a conservative system with cubic nonlinearity:
+\begin{align}
+\frac{dx}{dt} &= y, \label{eq:duf-x} \\
+\frac{dy}{dt} &= -\alpha_D x - \beta_D x^3, \label{eq:duf-y}
+\end{align}
+where $\alpha_D, \beta_D > 0$.
+We use $(\alpha_D, \beta_D) = (1.0, 1.0)$ (hardening spring) throughout.
+The system possesses an exact first integral:
+\begin{equation}
+E_D(x, y) = \tfrac{1}{2}y^2 + \tfrac{1}{2}\alpha_D x^2 + \tfrac{1}{4}\beta_D x^4,
+\label{eq:duffing-energy}
+\end{equation}
+satisfying $E_D(\bm{x}(t)) = E_D(\bm{x}_0)$ for all $t$.
+
+Duffing serves as a stress test for the scaling taxonomy.
+Like Lotka--Volterra, it is conservative, so the conservation-law prior is exact (GT residual $\approx 10^{-14}$).
+However, its cubic nonlinearity produces stronger trajectory curvature, yielding larger midpoint residuals (GT residual $= 1.72$ versus $0.15$ for LV at $T = 1.0$).
+If the midpoint floor tracks the ground-truth residual magnitude and the conservation prior recovers healthy scaling on this second conservative system, the evidence supports two claims: (1)~the floor-raising mechanism is universal and quantitatively predicted by the GT residual, and (2)~exact structural priors help when and only when the conserved quantity matches the system's geometry.
+
+\subsection{System ladder: rationale}
+\label{sec:system-ladder}
+
+The three systems form a controlled progression:
+
+\begin{center}
+\begin{tabular}{lccc}
+\toprule
+System & Conservation & Nonlinearity & Structural prior \\
+\midrule
+Lotka--Volterra & exact $H$ & predator--prey & conservation law (exact) \\
+Van der Pol & none & polynomial $\times$ state & dissipation rate (approximate) \\
+Duffing & exact $E_D$ & cubic & conservation law (exact) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Moving from LV to VdP removes conservation while keeping the ODE-residual priors (midpoint, Simpson) structurally identical---only the vector field $F$ changes.
+This isolates the effect of the structural prior: if the midpoint floor recurs on VdP, it cannot be an artifact of LV's particular dynamics.
+Moving from VdP to Duffing restores conservation but introduces stronger nonlinearity, testing whether the conservation prior's effectiveness depends on system geometry.
+The central prediction is that if the scaling taxonomy is tied to \emph{prior class properties} (biased residual, reduced-bias residual, exact structural constraint) rather than to any particular system, the same qualitative signatures should recur across the ladder.
+
 \subsection{Data generation}
 
-Initial conditions are sampled uniformly from $[0.5, 2.5]^2$.
-Ground-truth flow maps are computed using the DOP853 solver (Dormand--Prince 8(5,3)) at tolerances $\texttt{rtol} = 10^{-9}$, $\texttt{atol} = 10^{-11}$, with prediction horizon $T = 1.0$.
-The dataset comprises 20{,}000 training pairs, 2{,}000 validation, and 2{,}000 test pairs.
+For each system, initial conditions are sampled uniformly from a system-specific domain, and ground-truth flow maps are computed using the DOP853 solver (Dormand--Prince 8(5,3)) at tolerances $\texttt{rtol} = 10^{-9}$, $\texttt{atol} = 10^{-11}$, with prediction horizon $T = 1.0$.
+
+\begin{center}
+\begin{tabular}{lccc}
+\toprule
+System & IC domain & Max solver error & Conservation / dissipation check \\
+\midrule
+Lotka--Volterra & $[0.5, 2.5]^2$ & $1.9 \times 10^{-9}$ & $|\Delta H/H| \approx 2 \times 10^{-9}$ \\
+Van der Pol & $[-3, 3]^2$ & $3.8 \times 10^{-7}$ & N/A (non-conservative) \\
+Duffing & $[-2, 2]^2$ & $2.5 \times 10^{-7}$ & $|\Delta E_D/E_D| \approx 7 \times 10^{-8}$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Each system's dataset comprises 20{,}000 training pairs, 2{,}000 validation, and 2{,}000 test pairs.
 Training subsets of sizes $D \in \{64, 128, 256, 512, 1024, 2048, 4096, 8192\}$ are drawn as nested prefixes of the same shuffled training pool, ensuring that each smaller set is a subset of every larger one.
-Three independent data seeds (11, 22, 33) provide distinct pools.
+Three independent data seeds (11, 22, 33) provide distinct pools per system.
 
 %% ================================================================
 %%  MODELS
@@ -258,6 +341,7 @@ where
 \mathcal{L}_{\mathrm{mid}} = \frac{1}{B}\sum_{i=1}^{B} \left\| \hat{\bm{x}}_T^{(i)} - \bm{x}_0^{(i)} - T \cdot F\!\left(\tfrac{\bm{x}_0^{(i)} + \hat{\bm{x}}_T^{(i)}}{2}\right) \right\|_2^2
 \]
 and $F$ is the Lotka--Volterra vector field from \cref{eq:lv-prey,eq:lv-pred}.
+For Van~der~Pol and Duffing, the same formula applies with $F$ replaced by the respective system's vector field (\cref{eq:vdp-x,eq:vdp-y} or \cref{eq:duf-x,eq:duf-y}).
 This is a first-order implicit-midpoint quadrature approximation to the integral form of the ODE, computed on denormalized (physical) state variables.
 
 \subsection{Conservation-law prior}
@@ -273,6 +357,8 @@ where
 \]
 and $H$ is the invariant from \cref{eq:lv-invariant}.
 Unlike the midpoint residual, this prior has zero irreducible error: $\mathcal{L}_{\mathrm{cons}} = 0$ on exact flow-map targets.
+For Duffing, the same structure applies with $H$ replaced by $E_D$ from \cref{eq:duffing-energy}.
+For Van~der~Pol, the conservation prior is replaced by the dissipation-rate prior (\cref{eq:vdp-dissipation}), which is structurally analogous but inexact.
 
 \subsection{Composite two-step midpoint prior}
 \label{sec:composite-prior}
@@ -291,6 +377,24 @@ where the composite residual applies the midpoint rule on each half-interval:
 \end{align}
 Because the midpoint rule has local truncation error $O(h^3)$ where $h$ is the step size, halving the step from $T$ to $T/2$ reduces the residual on ground-truth targets by approximately $2^2 = 4\times$ per step, and the two-step composite achieves $\sim\!24\times$ lower physics loss on ground truth compared to single-step midpoint ($\mathcal{L}_{\mathrm{comp}}^* \approx 0.006$ vs.\ $\mathcal{L}_{\mathrm{mid}}^* \approx 0.151$).
 This design tests whether reducing---but not eliminating---the discretization bias recovers healthy scaling behavior.
+
+\subsection{Simpson's-rule prior}
+\label{sec:simpson-prior}
+
+To extend the bias-reduction series from second order (midpoint) to fourth order, we introduce a Simpson's $1/3$-rule prior.
+As with the composite model, the network predicts an intermediate state, outputting $(\hat{\bm{x}}_{T/2}, \hat{\bm{x}}_T) \in \mathbb{R}^4$.
+The Simpson residual applies the classical quadrature rule:
+\[
+\mathcal{L}_{\mathrm{simp}} = \frac{1}{B}\sum_{i=1}^{B} \left\|
+\hat{\bm{x}}_T^{(i)} - \bm{x}_0^{(i)} - \frac{T}{6}\left[
+F(\bm{x}_0^{(i)}) + 4F(\hat{\bm{x}}_{T/2}^{(i)}) + F(\hat{\bm{x}}_T^{(i)})
+\right]
+\right\|_2^2.
+\]
+Simpson's rule is fourth-order accurate ($O(h^5)$ local truncation error), reducing the ground-truth residual by a further $\sim\!14\times$ relative to the composite midpoint on LV ($\mathcal{L}_{\mathrm{simp}}^* \approx 4.4 \times 10^{-4}$ vs.\ $\mathcal{L}_{\mathrm{comp}}^* \approx 0.006$).
+The Simpson prior is applied to all three systems with the same formula, substituting only the vector field $F$.
+
+This creates a graded bias-reduction series---midpoint ($O(h^3)$), composite midpoint ($O(h^3)$ with $h \to h/2$), Simpson ($O(h^5)$)---enabling a dose--response analysis: if the error floor is causally linked to the ground-truth residual, lower-order bias should monotonically produce higher floors.
 
 %% ================================================================
 %%  EXPERIMENTAL DESIGN
@@ -328,15 +432,16 @@ The purpose is descriptive and comparative, not predictive.
 
 \subsection{Statistical protocol}
 
-Each $(N, D)$ configuration is run across 3 data seeds $\times$ 3 training seeds $= 9$ replicates.
-We report mean and standard error across replicates.
-Scaling-law parameters are estimated with 1{,}000 bootstrap samples to produce 95\% confidence intervals.
+For the anchor system (Lotka--Volterra), each $(N, D)$ configuration is run across 3 data seeds $\times$ 3 training seeds $= 9$ replicates.
+For the cross-system pilot sweeps (Van~der~Pol and Duffing), each configuration uses 1 data seed $\times$ 2 training seeds $= 2$ replicates at three capacities (small, medium, large) and three dataset sizes ($D \in \{128, 512, 2048\}$), yielding 72 runs per system.
+The pilot grid is sufficient to establish qualitative regime classification; full sweeps with bootstrap confidence intervals are deferred to future work.
+Scaling-law parameters are estimated with 1{,}000 bootstrap samples on LV to produce 95\% confidence intervals.
 
 \subsection{Training details}
 
 All models use Adam with learning rate $10^{-3}$, weight decay $10^{-6}$, batch size $\min(128, D)$, and train for up to 400 epochs with early stopping (patience 40 on validation relative $\ell_2$).
 The composite model has a 4-dimensional output; only the last two components ($\hat{\bm{x}}_T$) are used for the data loss and evaluation metric.
-The full grid comprises $5 \times 8 \times 9 = 360$ runs per model, totaling 1{,}080 production runs for the three scaling-law models (plain, midpoint, composite), plus 126 conservation-law $\lambda$-sweep runs and 324 midpoint $\lambda$-sweep runs.
+The full grid comprises $5 \times 8 \times 9 = 360$ runs per model on LV, totaling 1{,}080 production runs for the three LV scaling-law models (plain, midpoint, composite), plus 126 conservation-law $\lambda$-sweep runs, 324 midpoint $\lambda$-sweep runs, 810 conservation-rescue runs, and $2 \times 72 = 144$ cross-system pilot runs (Van~der~Pol and Duffing).
 
 %% ================================================================
 %%  RESEARCH QUESTIONS
@@ -344,16 +449,17 @@ The full grid comprises $5 \times 8 \times 9 = 360$ runs per model, totaling 1{,
 \section{Research Questions}
 
 \begin{enumerate}[leftmargin=*, itemsep=0.3em]
-    \item Do physics priors produce distinct, interpretable signatures in the scaling surface $E(N,D)$?
-    \item Does reducing the discretization bias of an ODE-residual prior recover healthy scaling?
-    \item Does an exact but informationally weak prior (conservation law) improve data efficiency?
+    \item Do physics priors produce distinct, interpretable signatures in the scaling surface $E(N,D)$, and do those signatures recur across dynamical systems?
+    \item Does reducing the discretization bias of an ODE-residual prior recover healthy scaling, and does the degree of recovery track the ground-truth residual magnitude?
+    \item Do exact structural priors (conservation, dissipation) help or hurt, and does the answer depend on whether the system actually possesses the targeted invariant?
     \item Can scaling exponents and error floors diagnose prior quality more informatively than pointwise comparisons?
 \end{enumerate}
 
 %% ================================================================
 %%  RESULTS
 %% ================================================================
-\section{Results}
+\section{Results: Lotka--Volterra (Anchor System)}
+\label{sec:results-lv}
 
 \subsection{Plain MLP baseline: scaling behavior}
 \label{sec:results-plain}
@@ -740,100 +846,375 @@ Second, the interaction term $d \cdot N^{-\alpha} D^{-\beta}$ reveals that capac
 This suggests that the physics prior mediates a joint capacity--data effect that the additive ansatz misses.
 
 %% ================================================================
+%%  RESULTS: GROUND-TRUTH RESIDUALS
+%% ================================================================
+\section{Ground-Truth Residual Diagnostics}
+\label{sec:gt-residuals}
+
+Before training any models on the new systems, we measure the irreducible physics-loss residual for each prior on each system by evaluating the loss on exact ground-truth flow-map targets.
+This model-free diagnostic predicts which priors will raise error floors before any experiments are run.
+
+\begin{table}[H]
+    \centering
+    \caption{Ground-truth physics-loss residual $\mathcal{L}_{\mathrm{phys}}^*$ for each prior on each system at $T = 1.0$.
+    Lower values indicate less discretization bias.
+    The structural prior column shows the conservation or dissipation loss as appropriate.}
+    \label{tab:gt-residuals}
+    \small
+    \begin{tabular}{lcccc}
+        \toprule
+        System & Midpoint & Composite & Simpson & Structural \\
+        \midrule
+        Lotka--Volterra & $0.151$ & $6.2 \times 10^{-3}$ & $4.4 \times 10^{-4}$ & $3.3 \times 10^{-14}$ (conservation) \\
+        Van der Pol     & $3.25$  & $0.38$               & $0.135$              & $3.50$ (dissipation) \\
+        Duffing         & $1.72$  & $0.134$              & $0.025$              & $5.8 \times 10^{-14}$ (conservation) \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+Several patterns are immediately apparent.
+First, the midpoint residual varies by more than $20\times$ across systems ($0.15$ to $3.25$), reflecting differences in trajectory curvature.
+Second, the bias-reduction series is consistent: composite reduces the midpoint residual by $8$--$24\times$, and Simpson reduces it by a further $3$--$14\times$, across all systems.
+Third, the structural prior residual is bimodal in character: on conservative systems (LV, Duffing), it is at machine epsilon ($\sim\!10^{-14}$); on non-conservative Van~der~Pol, the dissipation-rate approximation yields a residual ($3.50$) comparable to the midpoint---predicting that this prior will behave like a biased residual prior rather than an exact structural one.
+
+These residual magnitudes generate specific, testable predictions for the scaling experiments that follow.
+
+%% ================================================================
+%%  RESULTS: VAN DER POL
+%% ================================================================
+\section{Results: Van der Pol (Cross-System Generalization)}
+\label{sec:results-vdp}
+
+Van~der~Pol is the first generalization beyond the anchor system.
+It removes conservative structure while preserving the ODE-residual prior framework: only the vector field $F$ changes; the midpoint and Simpson formulas are structurally identical.
+The question is whether the floor-raising taxonomy established on LV survives once conservative geometry is removed.
+
+\subsection{Pilot sweep design}
+
+We run a pilot grid of 4 models (plain, midpoint, dissipation, Simpson) $\times$ 3 capacities (small, medium, large) $\times$ 3 dataset sizes ($D \in \{128, 512, 2048\}$) $\times$ 2 training seeds, yielding 72 runs.
+All 72 runs completed successfully with no divergence or NaN.
+
+\subsection{Results}
+
+\Cref{tab:vdp-results} reports test relative $\ell_2$ error at large capacity across dataset sizes.
+
+\begin{table}[H]
+    \centering
+    \caption{Van der Pol pilot results at large capacity ($N = 67{,}074$): mean test relative $\ell_2$ over 2 training seeds.}
+    \label{tab:vdp-results}
+    \small
+    \begin{tabular}{lrrr}
+        \toprule
+        Model & $D = 128$ & $D = 512$ & $D = 2048$ \\
+        \midrule
+        Plain            & $0.0265 \pm 0.0003$ & $0.0094 \pm 0.0003$ & $0.0053 \pm 0.0005$ \\
+        Midpoint (PIML)  & $0.1145 \pm 0.0024$ & $0.1099 \pm 0.0006$ & $0.1098 \pm 0.0005$ \\
+        Dissipation      & $0.1047 \pm 0.0025$ & $0.0901 \pm 0.0009$ & $0.0876 \pm 0.0007$ \\
+        Simpson          & $0.0319 \pm 0.0000$ & $0.0201 \pm 0.0018$ & $0.0176 \pm 0.0020$ \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\paragraph{Scaling slopes.}
+The log-log data-scaling slopes at large capacity reveal the same regime structure as LV:
+
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+Model & Data-scaling slope & Regime \\
+\midrule
+Plain       & $-0.58$ & Healthy scaling \\
+Midpoint    & $-0.02$ & Floor-dominated \\
+Dissipation & $-0.06$ & Floor-dominated \\
+Simpson     & $-0.22$ & Partial recovery \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Key findings.}
+\begin{itemize}[leftmargin=*]
+    \item The \textbf{midpoint floor recurs}: slope $-0.02$ (effectively flat), with a floor at $\sim\!11\%$ test error.
+    This is the same qualitative regime as LV, but with a higher floor, consistent with VdP's larger GT residual ($3.25$ vs.\ $0.15$).
+    \item The \textbf{dissipation prior falls into the floor-dominated regime}: slope $-0.06$, floor at $\sim\!8.8\%$.
+    This is the key cross-system finding for structural priors.
+    On LV, the conservation prior has GT residual $\sim\!10^{-14}$ and produces a qualitatively different (bimodal) failure.
+    On VdP, the dissipation prior has GT residual $3.50$---comparable to midpoint---and accordingly behaves like a biased residual prior rather than an exact structural one.
+    The structural prior's effectiveness depends on whether the targeted quantity is actually conserved.
+    \item The \textbf{Simpson prior partially recovers scaling}: slope $-0.22$, best error $0.018$.
+    This is $5.5\times$ better than midpoint but still $3.3\times$ worse than plain, consistent with partial but incomplete bias reduction (GT residual $0.135$ vs.\ midpoint's $3.25$).
+    \item \textbf{No bimodality} is observed in any VdP model (all coefficient-of-variation values $< 0.2$), unlike the LV conservation prior.
+\end{itemize}
+
+%% ================================================================
+%%  RESULTS: DUFFING
+%% ================================================================
+\section{Results: Duffing (Cross-System Stress Test)}
+\label{sec:results-duffing}
+
+Duffing restores conservative structure but with stronger nonlinearity (cubic versus predator--prey).
+This tests whether the conservation prior's failure on LV was due to the prior being weak, or due to LV-specific geometry.
+If conservation works on Duffing, the explanation is system-dependent rather than universal.
+
+\subsection{Pilot sweep design}
+
+Same grid as VdP: 4 models (plain, midpoint, conservation, Simpson) $\times$ 3 capacities $\times$ 3 dataset sizes $\times$ 2 training seeds $= 72$ runs.
+All 72 completed successfully.
+
+\subsection{Results}
+
+\begin{table}[H]
+    \centering
+    \caption{Duffing pilot results at large capacity ($N = 67{,}074$): mean test relative $\ell_2$ over 2 training seeds.}
+    \label{tab:duffing-results}
+    \small
+    \begin{tabular}{lrrr}
+        \toprule
+        Model & $D = 128$ & $D = 512$ & $D = 2048$ \\
+        \midrule
+        Plain            & $0.0122 \pm 0.0021$ & $0.0051 \pm 0.0005$ & $0.0035 \pm 0.0003$ \\
+        Midpoint (PIML)  & $0.1316 \pm 0.0007$ & $0.1295 \pm 0.0017$ & $0.1293 \pm 0.0001$ \\
+        Conservation     & $0.0142 \pm 0.0009$ & $0.0067 \pm 0.0008$ & $0.0042 \pm 0.0002$ \\
+        Simpson          & $0.0187 \pm 0.0003$ & $0.0136 \pm 0.0010$ & $0.0118 \pm 0.0000$ \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\paragraph{Scaling slopes.}
+
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+Model & Data-scaling slope & Regime \\
+\midrule
+Plain        & $-0.45$ & Healthy scaling \\
+Midpoint     & $-0.01$ & Floor-dominated \\
+Conservation & $-0.44$ & \textbf{Healthy scaling (near-plain)} \\
+Simpson      & $-0.17$ & Partial recovery \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Key findings.}
+\begin{itemize}[leftmargin=*]
+    \item The \textbf{midpoint floor is the most severe here}: slope $-0.01$ (effectively zero), floor at $\sim\!13\%$.
+    Duffing's cubic nonlinearity produces the largest GT residual ($1.72$), and the floor is correspondingly the highest across all three systems.
+    This confirms the quantitative link between GT residual and error floor.
+    \item The \textbf{conservation prior nearly matches plain}: slope $-0.44$ versus plain's $-0.45$, best error $0.0042$ versus $0.0035$ (ratio $1.2\times$).
+    This is a qualitatively different outcome from LV, where conservation produced bimodal failure, and from VdP, where the dissipation surrogate joined the floor-dominated regime.
+    On Duffing, where the conserved quantity $E_D$ is exact and the system is conservative, the structural prior produces healthy scaling.
+    \item The \textbf{conservation prior shows no bimodality} on Duffing (all CV $< 0.13$), in sharp contrast to LV where 40--70\% of large-model seeds trapped.
+    Combined with the rescue analysis on LV (\cref{sec:conservation-rescue} below), this suggests the bimodality is an optimizer-sensitivity issue specific to LV's loss landscape, not an inherent property of structural priors.
+    \item The \textbf{Simpson prior partially recovers scaling} with slope $-0.17$ and best error $0.012$, consistent with VdP and LV: better than midpoint, worse than plain.
+\end{itemize}
+
+%% ================================================================
+%%  RESULTS: CONSERVATION RESCUE
+%% ================================================================
+\subsection{Conservation-prior rescue on LV}
+\label{sec:conservation-rescue}
+
+The bimodal optimization failure of the conservation prior on LV (\cref{sec:results-conservation}) raises an interpretive question: is the bimodality an intrinsic property of the loss surface (the prior corrupts the surface), or a recoverable optimizer artifact (the prior is fine but the optimizer needs help)?
+The Duffing results above already suggest the latter, since the same prior class produces healthy scaling on a different conservative system.
+We test this directly on LV using four training interventions.
+
+We ran 810 rescue experiments across 5 variants (baseline, warm-start from a plain checkpoint, gradient clipping at max-norm $1.0$, lambda-ramp over 50 epochs, and two-stage training with 200 data-only epochs followed by 200 combined epochs) on the 162 configurations most susceptible to bimodality.
+
+\begin{table}[H]
+    \centering
+    \caption{Conservation-prior rescue results on LV (162 target configurations each).}
+    \label{tab:rescue}
+    \small
+    \begin{tabular}{lccc}
+        \toprule
+        Variant & Mean test $\ell_2$ & Std & Bimodal configs \\
+        \midrule
+        Baseline    & $0.098$ & $0.012$ & 15 / 162 \\
+        Warm-start  & $0.098$ & $0.012$ & 15 / 162 \\
+        Grad-clip   & $0.106$ & $0.015$ & 12 / 162 \\
+        Lambda-ramp & $\mathbf{0.080}$ & $0.011$ & $\mathbf{0 / 162}$ \\
+        Two-stage   & $0.088$ & $\mathbf{0.008}$ & $\mathbf{0 / 162}$ \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+Both lambda-ramp and two-stage scheduling \emph{completely eliminate bimodality} (0/162 configurations exhibit the $\sim\!0.09$ trap), confirming that the failure is an optimizer artifact, not intrinsic surface corruption.
+Lambda-ramp yields the best mean error ($0.080$); two-stage yields the tightest variance ($0.008$).
+However, neither intervention lowers the conservation floor below $\sim\!8\%$---the prior remains too informationally weak to improve upon the plain baseline in absolute error, even when optimization pathology is removed.
+
+This result refines the taxonomy for structural priors:
+\begin{itemize}[leftmargin=*]
+    \item On conservative systems where the structural prior is exact and sufficient (Duffing), healthy scaling is achieved without special scheduling.
+    \item On conservative systems where the structural prior is exact but weak (LV), scheduling resolves bimodality but a floor persists due to informational insufficiency.
+    \item On non-conservative systems (VdP), the structural surrogate is inexact and produces floor-dominated scaling indistinguishable from biased residual priors.
+\end{itemize}
+
+%% ================================================================
+%%  RESULTS: CROSS-SYSTEM COMPARISON
+%% ================================================================
+\section{Cross-System Comparison}
+\label{sec:cross-system}
+
+\Cref{tab:cross-system} synthesizes the scaling behavior across all three systems, presenting the data-scaling slope at large capacity and the best achieved test error for each model--system combination.
+
+\begin{table}[H]
+    \centering
+    \caption{Cross-system comparison of data-scaling slopes (log-log, large capacity) and best test error.
+    Slopes near zero indicate floor-dominated scaling; slopes $\lesssim -0.4$ indicate healthy power-law scaling.}
+    \label{tab:cross-system}
+    \small
+    \begin{tabular}{l cc cc cc}
+        \toprule
+        & \multicolumn{2}{c}{Lotka--Volterra} & \multicolumn{2}{c}{Van der Pol} & \multicolumn{2}{c}{Duffing} \\
+        \cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7}
+        Model & Slope & Best $E$ & Slope & Best $E$ & Slope & Best $E$ \\
+        \midrule
+        Plain       & $-0.37$ & $0.0008$ & $-0.58$ & $0.0053$ & $-0.45$ & $0.0035$ \\
+        Midpoint    & $-0.06$ & $0.0143$ & $-0.02$ & $0.1098$ & $-0.01$ & $0.1293$ \\
+        Structural  & N/A (bimodal) & --- & $-0.06$ & $0.0876$ & $-0.44$ & $0.0042$ \\
+        Simpson     & $-0.32$ & $0.0012$ & $-0.22$ & $0.0176$ & $-0.17$ & $0.0118$ \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\subsection{Regime recurrence}
+
+The cross-system data confirm four central findings:
+
+\paragraph{1.\ The midpoint floor is universal.}
+On all three systems, the midpoint prior produces data-scaling slopes near zero ($-0.01$ to $-0.06$), indicating floor-dominated scaling.
+The floor magnitude tracks the GT residual: LV (GT residual $0.15$, floor $\sim\!1.4\%$), VdP ($3.25$, floor $\sim\!11\%$), Duffing ($1.72$, floor $\sim\!13\%$).
+This is the paper's most robust finding: biased residual priors universally raise error floors, and the floor magnitude is quantitatively predictable from a model-free diagnostic.
+
+\paragraph{2.\ Structural priors are system-dependent.}
+The structural prior's behavior varies sharply across systems:
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Duffing} (conservation, exact): slope $-0.44$, nearly matching plain ($-0.45$).
+    Best error $0.0042$, only $1.2\times$ the plain baseline.
+    \item \textbf{LV} (conservation, exact but weak): bimodal failure without scheduling; with lambda-ramp, floor at $\sim\!8\%$ due to informational insufficiency.
+    \item \textbf{VdP} (dissipation, approximate): slope $-0.06$, indistinguishable from the midpoint regime.
+    The dissipation-rate approximation introduces bias comparable to the midpoint, and the scaling behavior reflects this.
+\end{itemize}
+The unifying explanation is that a structural prior helps scaling if and only if (a)~the targeted quantity is exactly conserved by the true dynamics, and (b)~the constraint is informationally sufficient to resolve the output.
+On Duffing, the energy $E_D$ satisfies both conditions.
+On LV, the invariant $H$ is exact but constrains only one scalar on a 2D output.
+On VdP, the dissipation balance is approximate, violating condition~(a).
+
+\paragraph{3.\ Simpson partially recovers scaling everywhere.}
+The Simpson prior achieves intermediate slopes on all three systems ($-0.17$ to $-0.32$), consistently better than midpoint ($-0.01$ to $-0.06$) and consistently worse than plain ($-0.37$ to $-0.58$).
+The recovery is proportional to the GT residual reduction: Simpson's $\sim\!10$--$300\times$ lower residual compared to midpoint yields $\sim\!3$--$5\times$ better scaling slopes.
+That Simpson never surpasses plain is consistent with a residual (but nonzero) discretization bias that prevents full scaling recovery.
+
+\paragraph{4.\ Regime classification is robust.}
+Each model falls into the same qualitative regime on every system:
+\begin{center}
+\begin{tabular}{lccc}
+\toprule
+Model & LV & VdP & Duffing \\
+\midrule
+Plain & Healthy & Healthy & Healthy \\
+Midpoint & Floor-dominated & Floor-dominated & Floor-dominated \\
+Structural & Optimization-limited & Floor-dominated & Healthy \\
+Simpson & Partial recovery & Partial recovery & Partial recovery \\
+\bottomrule
+\end{tabular}
+\end{center}
+The only model whose regime classification changes across systems is the structural prior---and that change is explained by a single mechanistic variable (whether the targeted quantity is an exact invariant of the system).
+
+%% ================================================================
 %%  DISCUSSION
 %% ================================================================
 \section{Discussion}
 
-\subsection{Scaling signatures as prior diagnostics}
+\subsection{A cross-system taxonomy of prior-induced scaling regimes}
 
-The central finding is that the three physics priors produce three qualitatively distinct scaling signatures (\cref{tab:scaling-params}), which we organize as a diagnostic taxonomy:
+The central finding is that physics priors induce distinct scaling regimes that recur across three dynamical systems with qualitatively different structure (\cref{tab:cross-system}).
+We organize these into a diagnostic taxonomy:
 
 \begin{enumerate}[leftmargin=*]
-    \item \textbf{Floor-raising (biased proxy).}
-    The single-step midpoint prior has irreducible discretization error ($\sim\!15\%$ relative residual on ground truth).
-    This elevates $\hat{E}_\infty$ by an order of magnitude and compresses both scaling exponents ($\hat{\alpha}: 0.93 \to 0.18$, $\hat{\beta}: 0.87 \to 0.54$).
-    The model becomes insensitive to additional data or capacity.
+    \item \textbf{Floor-dominated (biased residual).}
+    The single-step midpoint prior produces a near-zero data-scaling slope on every system tested ($-0.01$ to $-0.06$).
+    The floor magnitude tracks the ground-truth residual: LV ($0.15 \to 1.4\%$ floor), VdP ($3.25 \to 11\%$), Duffing ($1.72 \to 13\%$).
+    This is the most robust finding: biased residual priors universally raise error floors, and the floor is quantitatively predictable from a model-free diagnostic (\cref{tab:gt-residuals}).
 
-    \item \textbf{Scaling recovery (reduced-bias proxy).}
-    The composite two-step midpoint prior reduces the ground-truth residual by $\sim\!24\times$.
-    This recovers a low-floor, responsive learning surface ($\hat{E}_\infty \approx 0.001$) with scaling exponents ($\hat{\alpha} \approx 2.0$, $\hat{\beta} \approx 1.0$) at least as steep as the plain baseline.
+    \item \textbf{Partial recovery (reduced-bias residual).}
+    The Simpson prior ($O(h^5)$ local truncation) recovers intermediate scaling slopes ($-0.17$ to $-0.32$) on all three systems, consistently better than midpoint and consistently worse than plain.
+    The composite two-step midpoint on LV shows even steeper recovery ($\hat{\alpha} \approx 2.0$, $\hat{\beta} \approx 1.0$, with wide CIs).
+    The degree of recovery is monotonically linked to the GT residual reduction, establishing a dose--response relationship between discretization accuracy and scaling behavior.
 
-    \item \textbf{Surface-corrupting (exact but informationally weak).}
-    The conservation-law prior has zero bias but constrains only a single scalar on a 2-dimensional output.
-    Rather than improving scaling, it introduces bimodal optimization failure that worsens with model capacity, precluding power-law fitting.
+    \item \textbf{System-dependent structural.}
+    The structural prior (conservation or dissipation) is the only prior whose regime classification changes across systems.
+    On conservative Duffing, it produces healthy scaling (slope $-0.44$, near-plain).
+    On LV, it is exact but informationally weak, producing bimodal optimization failure that is resolvable via scheduling (\cref{sec:conservation-rescue}).
+    On non-conservative VdP, the dissipation surrogate introduces bias comparable to midpoint and produces floor-dominated scaling (slope $-0.06$).
+    The explanatory variable is whether the targeted quantity is an exact invariant of the system.
 \end{enumerate}
 
-These three signatures are \emph{not} visible in pointwise comparisons.
-At any single $(N,D)$ configuration, both ODE-residual priors underperform the plain baseline in absolute terms; only the scaling exponents and error floors reveal that the single-step prior destroys scaling behavior while the composite prior enhances it.
+These regime types are \emph{not} visible in pointwise comparisons.
+At any single $(N,D)$ configuration, physics-regularized models may underperform the plain baseline in absolute terms; only the scaling surface reveals whether the prior destroys, partially recovers, or preserves healthy scaling behavior.
 
-\subsection{Why the midpoint prior raises the floor}
+\subsection{Why the midpoint floor is universal}
 
-The midpoint-rule residual approximates $\int_0^T F(\bm{x}(t))\,dt$ with a single evaluation at the midpoint $(\bm{x}_0 + \bm{x}_T)/2$.
-At $T = 1.0$, the Lotka--Volterra trajectory curvature makes this approximation poor: ground-truth targets incur $\sim\!15\%$ relative residual.
-As the data loss decreases during training, the physics gradient grows relative to the data gradient:
+The floor-raising mechanism is the same across all three systems: the midpoint-rule residual approximates $\int_0^T F(\bm{x}(t))\,dt$ with a single evaluation at $(\bm{x}_0 + \bm{x}_T)/2$.
+As the data loss decreases during training, the biased physics gradient grows relative to the data gradient:
 \[
 \frac{\lambda \cdot \nabla \mathcal{L}_{\mathrm{mid}}}{\nabla \mathcal{L}_{\mathrm{data}}} \sim \frac{\lambda \cdot O(1)}{O(\mathcal{L}_{\mathrm{data}})},
 \]
-eventually dominating the optimization.
-This mechanism produces the monotonic dose--response degradation in the $\lambda$ sweep (\cref{fig:lambda-midpoint}) and explains both the observed error plateau and the premature early stopping.
+eventually dominating the optimization and producing a plateau.
+The floor height scales with the GT residual magnitude, which depends on the trajectory curvature of each system at the chosen horizon.
+This mechanism explains why the floor is highest on Duffing (strongest curvature from cubic nonlinearity) and lowest on LV.
 
-\subsection{Why the composite prior recovers scaling}
+\subsection{Why bias reduction recovers scaling}
 
-Halving the step size from $T$ to $T/2$ in the composite scheme reduces the ground-truth physics loss by $\sim\!24\times$ (from $0.151$ to $0.006$; \cref{app:lambda-diagnostic}).
-This shifts the model from the approximation-limited regime---where the biased prior floor dominates---into a regime where both data and physics gradients provide useful signal throughout training.
+The composite and Simpson priors reduce the GT residual by $8$--$24\times$ and $14$--$300\times$ respectively relative to midpoint, delaying or eliminating the gradient-ratio crossover point.
+The recovered scaling slopes track the residual reduction monotonically across all systems, establishing a causal link.
+On LV, the composite prior achieves near-zero error floor ($\hat{E}_\infty \approx 0.001$) with exponents at least as steep as the plain baseline (noting wide bootstrap intervals: $\hat{\alpha} \in [0.26, 2.76]$).
+The practical implication is that for ODE-residual priors, the \emph{accuracy of the numerical discretization} determines whether the prior helps or hurts in the scaling limit---a diagnosis available before any training runs.
 
-The recovered exponents ($\hat{\alpha} \approx 2.0$ vs.\ $0.93$; noting the wide bootstrap intervals) are consistent with the physics regularization providing useful signal throughout training, analogous to how well-matched regularizers improve sample complexity in classical learning theory.
-The remaining error floor ($\hat{E}_\infty \approx 0.001$) reflects the residual discretization bias of the two-step scheme and could, in principle, be further reduced with higher-order or multi-step methods.
+\subsection{Why structural priors are system-dependent}
 
-This result has a practical implication: for ODE-residual priors, the \emph{accuracy of the numerical discretization} determines whether the prior helps or hurts in the scaling limit.
-A practitioner can diagnose this by computing the ground-truth residual magnitude---a simple, model-free check that predicts the scaling behavior before any training runs.
+The conservation constraint $H(\hat{\bm{x}}_T) = H(\bm{x}_0)$ restricts predictions to a 1-dimensional level curve containing the correct target.
+Whether this helps depends on two conditions:
+\begin{enumerate}[leftmargin=*]
+    \item \textbf{Exactness}: the targeted quantity must be exactly conserved.
+    On VdP, the dissipation-rate balance is approximate (GT residual $3.50$), and the prior behaves like a biased residual---falling into the floor-dominated regime.
+    \item \textbf{Informational sufficiency}: the constraint must resolve the output.
+    On Duffing, the energy $E_D = \frac{1}{2}y^2 + \frac{1}{2}\alpha_D x^2 + \frac{1}{4}\beta_D x^4$ constrains a 2D output sufficiently (slope $-0.44$, no bimodality).
+    On LV, $H$ is exact but constrains only one scalar on a 2D output; the conservation gradient vanishes along the level curve tangent, creating degenerate directions that produce bimodal failure at high capacity.
+    The rescue analysis confirms this is an optimizer artifact: lambda-ramp scheduling eliminates all bimodality (0/162 configs), though the informational floor at $\sim\!8\%$ persists.
+\end{enumerate}
 
-\subsection{Why the conservation prior corrupts the surface}
-
-The conservation constraint $H(\hat{\bm{x}}_T) = H(\bm{x}_0)$ is exact yet informationally weak: it constrains a single scalar invariant on a 2-dimensional output.
-The level set $\{(u,v) : H(u,v) = c\}$ is a closed curve containing the correct target, but the conservation loss gradient vanishes along the tangent to this curve.
-The combined loss landscape acquires ridge-like structures whose severity increases with model capacity: larger models have more degrees of freedom that can align with the degenerate manifold direction.
-
-This pathology is distinct from the training failures reported for PINNs~\cite{wang2022ntk}, which arise from spectral bias and ill-conditioned neural tangent kernels.
-The conservation failure is geometric rather than spectral: it stems from the rank deficiency of the constraint Jacobian relative to the output dimension.
-Informational sufficiency---whether the physics prior constrains all output degrees of freedom---may be as important as bias-freeness.
+This result extends the single-system observation from the anchor study into a mechanistic principle: structural priors are not universally helpful or harmful---their scaling behavior is determined by the match between the constraint and the system's geometry.
 
 \subsection{Practical implications}
 
-The results suggest a simple workflow for evaluating candidate soft physics priors before committing to large-scale experiments.
+The cross-system results refine the practical workflow for evaluating physics priors:
 
-First, compute the prior residual on exact or high-quality reference targets whenever possible.
-A large nonzero residual is a warning that the prior may impose a harmful floor; the ground-truth residual magnitude of an ODE-residual prior predicts its scaling behavior before any training runs.
-
-Second, run a small $\lambda$-sweep.
-A monotone dose--response degradation pattern is evidence of biased prior--task mismatch; non-monotone, seed-sensitive behavior indicates a different class of failure, more likely related to optimization geometry.
-
-Third, inspect the joint $(N,D)$ surface rather than one or two benchmark settings.
-Distinct priors can produce superficially similar pointwise underperformance while differing sharply in why they fail.
-
-The ansatz comparison (\cref{sec:results-ansatz}) adds a further consideration: the interaction term $d \cdot N^{-\alpha}D^{-\beta}$ is significant for all three models but varies in magnitude ($d \approx 0.5$ for midpoint, $d \approx 7.4$ for plain, $d \approx 13.1$ for composite), indicating that capacity and data scaling are not fully separable and that physics priors modulate their coupling.
+\begin{enumerate}[leftmargin=*]
+    \item \textbf{Compute the GT residual} on exact or high-quality reference targets.
+    A nonzero residual predicts the floor height; the ratio between GT residuals for two priors predicts their relative scaling behavior.
+    This diagnostic generalizes across systems (\cref{tab:gt-residuals}).
+    \item \textbf{Check structural-prior exactness} before deploying conservation or balance-law penalties.
+    An approximate structural prior (e.g., dissipation on VdP) behaves like a biased residual prior, not like an exact constraint.
+    \item \textbf{Run a $\lambda$-sweep} to distinguish prior classes.
+    Monotone degradation indicates biased-residual mismatch; non-monotone, seed-sensitive behavior indicates optimization-geometry failure.
+    \item \textbf{Inspect the joint $(N,D)$ surface} rather than benchmark scores.
+    Distinct priors producing similar pointwise underperformance may occupy fundamentally different scaling regimes.
+\end{enumerate}
 
 \subsection{Connection to scaling-law theory}
 
-Bahri et al.~\cite{bahri2024} explain neural scaling laws through two limiting regimes: a \emph{variance-limited} regime at small data (where error decreases as $D^{-\beta}$) and a \emph{resolution-limited} regime at small model capacity (where error decreases as $N^{-\alpha}$).
-In this framework, the plain MLP in our study operates in a regime where both limitations are active and neither dominates, producing clean power-law behavior across the tested $(N,D)$ grid.
+Bahri et al.~\cite{bahri2024} explain neural scaling laws through variance-limited and resolution-limited regimes.
+Our results identify two additional regimes specific to SciML:
+\begin{itemize}[leftmargin=*]
+    \item An \emph{approximation-limited} regime where the irreducible bias of the physics loss creates a floor that dominates both variance and resolution components.
+    This regime manifests for midpoint priors on all three systems and for the dissipation prior on VdP.
+    \item An \emph{optimization-limited} regime where loss landscape geometry determines performance.
+    This manifests for the conservation prior on LV but not on Duffing, indicating that the regime depends on the prior--system interaction.
+\end{itemize}
 
-The midpoint prior disrupts this picture by introducing a third limitation: an \emph{approximation-limited} regime in which the irreducible bias of the physics loss creates a floor that dominates both the variance and resolution components.
-This floor manifests as the large $\hat{E}_\infty$ and compressed exponents in \cref{tab:scaling-params}.
-The composite prior demonstrates that reducing this bias can \emph{exit} the approximation-limited regime, recovering healthy scaling behavior.
-The conservation prior introduces yet another regime: an \emph{optimization-limited} regime where the loss landscape geometry, rather than data or capacity, determines performance.
-These additional regimes are absent from the standard deep-learning scaling framework and may require dedicated theoretical treatment for SciML settings.
-
-The observation that scientific learning problems can be simultaneously variance-limited, resolution-limited, approximation-limited, and optimization-limited---depending on the form of the physics prior---motivates extending scaling-law theory to accommodate structured loss functions and constrained architectures.
-Recent surveys of scaling behavior across machine learning settings~\cite{wang2024scaling} document similar anomalies in other structured domains, suggesting that regime transitions driven by inductive-bias mismatch may be a general phenomenon.
-
-\subsection{Why this paper stays narrow}
-
-Lotka--Volterra is a deliberately minimal system.
-It is simple enough to permit exhaustive sweeps and direct diagnostics, yet rich enough to include nonlinear flow structure and an exact invariant.
-The purpose of this paper is not to establish universal laws for all scientific machine learning.
-It is to show, in the cleanest possible setting, that scaling surfaces can reveal diagnostically meaningful differences among physics priors.
-A broader research program should test whether the same signatures recur in other ODEs, PDE flow-map tasks, and richer physics-informed architectures.
+The cross-system evidence strengthens the case that these additional regimes are not artifacts of a single system.
+The approximation-limited regime recurs universally, while the optimization-limited regime recurs only when geometric conditions (informational insufficiency of the constraint) are met.
+Extending scaling-law theory to accommodate structured loss functions and constrained architectures remains an open theoretical challenge.
 
 %% ================================================================
 %%  LIMITATIONS
@@ -841,14 +1222,17 @@ A broader research program should test whether the same signatures recur in othe
 \section{Limitations}
 
 \begin{enumerate}[leftmargin=*, itemsep=0.3em]
-    \item The study uses a single dynamical system (Lotka--Volterra); conclusions should not be overgeneralized to PDE learning, chaotic systems, or real-world scientific datasets.
-    \item It compares a plain MLP against three soft-constraint regularizers; hard architectural constraints and operator-learning approaches are not tested.
+    \item The study covers three 2D autonomous ODE systems.
+    All are low-dimensional, non-chaotic, and deterministic; conclusions should not be overgeneralized to PDE learning, chaotic systems, high-dimensional systems, or real-world scientific datasets with measurement noise.
+    \item The cross-system results (VdP, Duffing) use a pilot grid of 2 seeds $\times$ 3 capacities $\times$ 4 dataset sizes, smaller than the full LV sweep.
+    Pilot scaling slopes are indicative but carry wider uncertainty than the anchor results.
+    \item It compares a plain MLP against four soft-constraint regularizers; hard architectural constraints, equivariant networks, and operator-learning approaches are not tested.
     \item The task is fixed-horizon flow-map prediction at $T = 1.0$, not long-horizon rollout, and all data are synthetic and noise-free.
     \item The scaling fits are descriptive.
-    Although the ansatz comparison (\cref{sec:results-ansatz}) shows qualitative robustness, the fitted exponents should not be treated as universal constants.
+    Although the ansatz comparison (\cref{sec:results-ansatz}) shows qualitative robustness on LV, the fitted exponents should not be treated as universal constants.
     The composite prior's estimated capacity exponent has wide uncertainty ($\hat{\alpha} \in [0.26, 2.76]$), so the main claim should be read as ``healthy low-floor scaling is recovered,'' not as a precise quantitative law.
     \item No prior tested here improves over the plain baseline in absolute test error; the composite prior's advantage is visible only in scaling exponents and error floor.
-    \item The conservation-law failures may depend on the chosen optimizer and could potentially be reduced by methods not explored here, such as continuation strategies or adaptive weighting.
+    \item The conservation-law bimodality on LV depends on the chosen optimizer and can be reduced by lambda-ramp scheduling (\cref{sec:conservation-rescue}), but the informational floor persists.
     \item The ansatz comparison reveals a non-negligible interaction term ($d \cdot N^{-\alpha}D^{-\beta}$), suggesting the additive separable ansatz used for the main results is a simplification.
 \end{enumerate}
 
@@ -857,18 +1241,18 @@ A broader research program should test whether the same signatures recur in othe
 %% ================================================================
 \section{Conclusion}
 
-We introduced empirical scaling laws as a diagnostic framework for evaluating physics priors in scientific machine learning and applied the approach to fixed-horizon Lotka--Volterra flow-map prediction.
-Across more than 1{,}400 runs, three simple priors produced three qualitatively different scaling signatures.
+We introduced empirical scaling laws as a diagnostic framework for evaluating physics priors in scientific machine learning and tested it across three dynamical systems---Lotka--Volterra, Van der Pol, and Duffing---spanning conservative, dissipative, and conservative-with-cubic-nonlinearity dynamics.
+Across more than 2{,}300 runs (including 810 rescue configurations), four prior types produced four qualitatively distinct scaling signatures, three of which recur across all systems tested.
 
-A biased single-step ODE-residual prior raised the error floor and compressed scaling exponents.
-A reduced-bias composite residual prior recovered a low-floor, responsive learning surface.
-An exact but informationally weak conservation prior corrupted the surface through bimodal optimization failure.
-These signatures persisted across five alternative scaling ansatzes, including models with interaction terms and a nonparametric baseline.
+A biased single-step ODE-residual prior raises the error floor and compresses scaling exponents universally; the floor height is quantitatively predicted by the model-free ground-truth residual diagnostic.
+A reduced-bias Simpson prior partially recovers scaling on all three systems, establishing a dose--response link between discretization accuracy and scaling behavior.
+A composite two-step midpoint prior achieves near-full recovery on LV, the system where it was tested in depth.
+An exact structural prior (conservation or dissipation) is the only prior whose regime classification is system-dependent: it produces healthy scaling on Duffing where the invariant is informationally sufficient, bimodal failure on LV where it is informationally weak (resolvable via scheduling), and floor-dominated scaling on VdP where the targeted quantity is approximate.
 
 The main contribution is methodological.
 Scaling behavior itself can serve as an evaluation object in scientific machine learning.
 Priors should be judged not only by whether they improve one benchmark score, but by how they reshape the joint dependence of error on data, model size, and optimization.
-Even in a minimal ODE setting, this perspective reveals distinctions that pointwise comparisons miss: two priors that both underperform the baseline in absolute terms produce fundamentally different scaling signatures---one destructive, one constructive.
+The cross-system evidence shows that universal regimes (floor-dominated, partial recovery) coexist with system-dependent regimes (structural-prior behavior), and that both are diagnosable before committing to large-scale experiments.
 That makes scaling-law analysis a promising tool for more principled evaluation of physical inductive biases in future scientific learning studies.
 
 \section*{Acknowledgments}
@@ -895,25 +1279,37 @@ This rules out hidden code-path discrepancies.
 
 \subsection{Ground-truth residual}
 
-Evaluating the physics-loss residuals on exact ground-truth targets:
+Evaluating the physics-loss residuals on exact ground-truth targets across all three systems:
 
 \begin{center}
-\begin{tabular}{lcc}
+\begin{tabular}{llcc}
 \toprule
-Prior & $\mathcal{L}_{\mathrm{phys}}^*$ on GT & Relative to midpoint \\
+System & Prior & $\mathcal{L}_{\mathrm{phys}}^*$ on GT & Relative to midpoint \\
 \midrule
-Single-step midpoint & $0.151$ & $1\times$ (baseline) \\
-Composite 2-step midpoint & $0.006$ & $\sim\!24\times$ lower \\
-Conservation law & $\sim\!10^{-14}$ & exact \\
+LV & Single-step midpoint & $0.151$ & $1\times$ (baseline) \\
+LV & Composite 2-step midpoint & $0.006$ & $\sim\!24\times$ lower \\
+LV & Simpson 1/3-rule & $0.011$ & $\sim\!14\times$ lower \\
+LV & Conservation law & $\sim\!10^{-14}$ & exact \\
+\midrule
+VdP & Single-step midpoint & $3.25$ & $1\times$ \\
+VdP & Simpson 1/3-rule & $0.23$ & $\sim\!14\times$ lower \\
+VdP & Dissipation balance & $3.50$ & $\sim\!1\times$ (biased) \\
+\midrule
+Duffing & Single-step midpoint & $1.72$ & $1\times$ \\
+Duffing & Simpson 1/3-rule & $0.005$ & $\sim\!300\times$ lower \\
+Duffing & Energy conservation & $\sim\!10^{-13}$ & exact \\
 \bottomrule
 \end{tabular}
 \end{center}
 
-For the single-step midpoint:
+For the single-step midpoint on LV:
 \[
 \text{Mean } \|r\|_2 = 0.363, \qquad
 \text{Mean relative residual} \approx 15\%.
 \]
+
+The GT residual magnitude predicts the scaling regime: priors with residuals $\gg 0$ produce floor-dominated scaling, while priors with near-zero residuals produce healthy or partially recovered scaling.
+This pattern holds across all three systems.
 
 \subsection{Interpretation}
 

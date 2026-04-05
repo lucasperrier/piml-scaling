@@ -6,6 +6,7 @@ from pathlib import Path
 
 from scaling_piml.config_loader import load_experiment_config
 from scaling_piml.data.dataset import FlowMapDataset
+from scaling_piml.data.onestep_dataset import OneStepDataset
 from scaling_piml.models.mlp import CAPACITY_GRID
 from scaling_piml.train import train_one_run
 from scaling_piml.utils.io import ensure_dir, save_json
@@ -36,9 +37,16 @@ def _pilot_dataset_sizes(dataset_sizes: list[int]) -> list[int]:
     return ordered
 
 
-def _run_dir(out_root: Path, model: str, capacity_name: str, dataset_size: int, data_seed: int, train_seed: int) -> Path:
+def _run_dir(
+    out_root: Path, model: str, capacity_name: str, dataset_size: int,
+    data_seed: int, train_seed: int,
+    *, task: str = "flowmap", dt: float | None = None,
+) -> Path:
+    base = out_root
+    if task != "flowmap":
+        base = base / f"task={task}" / f"dt={dt}"
     return ensure_dir(
-        out_root
+        base
         / f"model={model}"
         / f"capacity={capacity_name}"
         / f"D={dataset_size}"
@@ -47,7 +55,7 @@ def _run_dir(out_root: Path, model: str, capacity_name: str, dataset_size: int, 
     )
 
 
-_PRIOR_MAP = {"plain": "none", "piml": "midpoint", "piml-conservation": "conservation", "piml-simpson": "simpson", "piml-simpson-true": "simpson-true"}
+_PRIOR_MAP = {"plain": "none", "piml": "midpoint", "piml-conservation": "conservation", "piml-simpson": "simpson", "piml-simpson-true": "simpson-true", "piml-trapezoidal": "trapezoidal"}
 
 
 def _failure_metrics(*, model: str, capacity_name: str, hidden_widths: list[int], dataset_size: int, data_seed: int, train_seed: int, data_root: Path, run_dir: Path, reason: str) -> dict[str, object]:
@@ -109,7 +117,15 @@ def main() -> None:
     parser.add_argument("--system", type=str, default=None,
                         choices=["lotka-volterra", "duffing", "van-der-pol"],
                         help="Override system name in config")
+    parser.add_argument("--task", type=str, default="flowmap",
+                        choices=["flowmap", "onestep"],
+                        help="Task type: flowmap (default) or onestep")
+    parser.add_argument("--dt", type=float, default=None,
+                        help="Time step for one-step task (required if --task=onestep)")
     args = parser.parse_args()
+
+    if args.task == "onestep" and args.dt is None:
+        parser.error("--dt is required when --task=onestep")
 
     cfg = load_experiment_config(args.config)
     if args.system is not None:
@@ -134,7 +150,7 @@ def main() -> None:
     run_index = 0
 
     for model in models:
-        if model not in {"plain", "piml", "piml-conservation", "piml-simpson", "piml-simpson-true"}:
+        if model not in {"plain", "piml", "piml-conservation", "piml-simpson", "piml-simpson-true", "piml-trapezoidal"}:
             raise ValueError(f"Unknown model: {model}")
         for capacity_name in capacities:
             if capacity_name not in CAPACITY_GRID:
@@ -146,7 +162,7 @@ def main() -> None:
                         raise FileNotFoundError(f"Missing dataset directory: {data_root}")
                     for train_seed in train_seeds:
                         run_index += 1
-                        run_dir = _run_dir(out_root, model, capacity_name, dataset_size, data_seed, train_seed)
+                        run_dir = _run_dir(out_root, model, capacity_name, dataset_size, data_seed, train_seed, task=args.task, dt=args.dt)
                         metrics_path = run_dir / "metrics.json"
                         if metrics_path.exists() and not args.overwrite:
                             print(f"[{run_index}/{total_runs}] skip {metrics_path}")
@@ -159,6 +175,10 @@ def main() -> None:
                         if args.horizon is not None:
                             run_cfg.data.T = args.horizon
 
+                        # For one-step task, set T = dt so physics priors use the correct horizon
+                        if args.task == "onestep":
+                            run_cfg.data.T = args.dt
+
                         # Prior mismatch: override system params in physics loss
                         if args.prior_params is not None:
                             pp = [float(v) for v in args.prior_params.split(",")]
@@ -169,10 +189,15 @@ def main() -> None:
                             if len(pp) > 3:
                                 run_cfg.system.gamma = pp[3]
 
-                        train_ds = FlowMapDataset(data_root, "train", D=dataset_size, normalize=True,
-                                                   obs_noise=args.obs_noise, noise_seed=train_seed)
-                        val_ds = FlowMapDataset(data_root, "val", normalize=True)
-                        test_ds = FlowMapDataset(data_root, "test", normalize=True)
+                        if args.task == "onestep":
+                            train_ds = OneStepDataset(data_root, "train", dt=args.dt, D=dataset_size, normalize=True)
+                            val_ds = OneStepDataset(data_root, "val", dt=args.dt, normalize=True)
+                            test_ds = OneStepDataset(data_root, "test", dt=args.dt, normalize=True)
+                        else:
+                            train_ds = FlowMapDataset(data_root, "train", D=dataset_size, normalize=True,
+                                                       obs_noise=args.obs_noise, noise_seed=train_seed)
+                            val_ds = FlowMapDataset(data_root, "val", normalize=True)
+                            test_ds = FlowMapDataset(data_root, "test", normalize=True)
 
                         try:
                             metrics = train_one_run(

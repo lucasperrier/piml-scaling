@@ -551,3 +551,56 @@ def vdp_simpson_loss(
     F_T = _vdp_vector_field(uT_hat, mu=mu)
     r = uT_hat - u0 - (T / 6.0) * (F0 + 4.0 * F_mid + F_T)
     return torch.mean(torch.sum(r**2, dim=1))
+
+
+# ===========================================================================
+# Trapezoidal rule ODE residual  (2nd-order, endpoint-only)
+#
+# r = u_T - u_0 - (T/2)[F(u_0) + F(u_T)]
+# Uses 2D output (same as midpoint), no auxiliary midpoint needed.
+# ===========================================================================
+
+def trapezoidal_physics_loss(
+    *,
+    u0: torch.Tensor,
+    uT_hat: torch.Tensor,
+    T: float,
+    alpha: float,
+    beta: float,
+    delta: float,
+    gamma: float,
+) -> torch.Tensor:
+    """Trapezoidal-rule ODE residual loss for Lotka–Volterra."""
+    F0 = _lv_vector_field(u0, alpha=alpha, beta=beta, delta=delta, gamma=gamma)
+    FT = _lv_vector_field(uT_hat, alpha=alpha, beta=beta, delta=delta, gamma=gamma)
+    r = uT_hat - u0 - (T / 2.0) * (F0 + FT)
+    return torch.mean(torch.sum(r**2, dim=1))
+
+
+def duffing_trapezoidal_physics_loss(
+    *,
+    u0: torch.Tensor,
+    uT_hat: torch.Tensor,
+    T: float,
+    alpha: float,
+    beta: float,
+) -> torch.Tensor:
+    """Trapezoidal-rule ODE residual loss for the Duffing oscillator."""
+    F0 = _duffing_vector_field(u0, alpha=alpha, beta=beta)
+    FT = _duffing_vector_field(uT_hat, alpha=alpha, beta=beta)
+    r = uT_hat - u0 - (T / 2.0) * (F0 + FT)
+    return torch.mean(torch.sum(r**2, dim=1))
+
+
+def vdp_trapezoidal_physics_loss(
+    *,
+    u0: torch.Tensor,
+    uT_hat: torch.Tensor,
+    T: float,
+    mu: float,
+) -> torch.Tensor:
+    """Trapezoidal-rule ODE residual loss for the Van der Pol oscillator."""
+    F0 = _vdp_vector_field(u0, mu=mu)
+    FT = _vdp_vector_field(uT_hat, mu=mu)
+    r = uT_hat - u0 - (T / 2.0) * (F0 + FT)
+    return torch.mean(torch.sum(r**2, dim=1))
